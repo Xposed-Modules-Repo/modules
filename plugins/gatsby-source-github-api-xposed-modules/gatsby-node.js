@@ -37,7 +37,7 @@ function makeRepositoriesQuery (cursor) {
           description
           url
           homepageUrl
-          collaborators(affiliation: OUTSIDE, first: 3) {
+          collaborators(affiliation: ALL, first: 20) {
             edges {
               node {
                 login
@@ -45,17 +45,37 @@ function makeRepositoriesQuery (cursor) {
               }
             }
           }
-          summary: object(expression: "HEAD:SUMMARY") {
-            ... on Blob {
-              text
-            }
-          }
           readme: object(expression: "HEAD:README.md") {
             ... on Blob {
               text
             }
           }
-          releases(first: 1) {
+          summary: object(expression: "HEAD:SUMMARY") {
+            ... on Blob {
+              text
+            }
+          }
+          scope: object(expression: "HEAD:SCOPE") {
+            ... on Blob {
+              text
+            }
+          }
+          sourceUrl: object(expression: "HEAD:SOURCE_URL") {
+            ... on Blob {
+              text
+            }
+          }
+          hide: object(expression: "HEAD:HIDE") {
+            ... on Blob {
+              text
+            }
+          }
+          additionalAuthors: object(expression: "HEAD:ADDITIONAL_AUTHORS") {
+            ... on Blob {
+              text
+            }
+          }
+          releases(first: 20) {
             edges {
               node {
                 name
@@ -65,7 +85,7 @@ function makeRepositoriesQuery (cursor) {
                 updatedAt
                 tagName
                 isPrerelease
-                releaseAssets(first: 1) {
+                releaseAssets(first: 50) {
                   edges {
                     node {
                       name

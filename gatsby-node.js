@@ -34,9 +34,6 @@ exports.onPostBuild = async ({ graphql }) => {
                   }
                 }
               }
-              readme {
-                text
-              }
               releases {
                 edges {
                   node {
@@ -59,7 +56,22 @@ exports.onPostBuild = async ({ graphql }) => {
                   }
                 }
               }
+              readme {
+                text
+              }
               summary {
+                text
+              }
+              scope {
+                text
+              }
+              sourceUrl {
+                text
+              }
+              hide {
+                text
+              }
+              additionalAuthors {
                 text
               }
             }
@@ -74,7 +86,9 @@ exports.onPostBuild = async ({ graphql }) => {
   flatten(result)
   let modules
   try {
-    modules = result.data.githubData.data.organization.repositories
+    modules = result.data.githubData.data.organization.repositories.filter((repo) => (
+      repo.name.match(/\./) && repo.name !== 'org.meowcat.example'
+    ))
   } catch (e) {
     throw new Error(`${e.message}, ${JSON.stringify(result)}`)
   }
