@@ -75,13 +75,15 @@ function makeRepositoriesQuery (cursor) {
               text
             }
           }
-          releases(first: 20) {
+          releases(orderBy: {field: CREATED_AT, direction: DESC}, first: 20) {
             edges {
               node {
                 name
                 url
                 description
                 descriptionHTML
+                createdAt
+                publishedAt
                 updatedAt
                 tagName
                 isPrerelease

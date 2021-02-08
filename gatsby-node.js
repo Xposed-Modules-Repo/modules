@@ -41,6 +41,8 @@ exports.onPostBuild = async ({ graphql }) => {
                     url
                     description
                     descriptionHTML
+                    createdAt
+                    publishedAt
                     updatedAt
                     tagName
                     isPrerelease
