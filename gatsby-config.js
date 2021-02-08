@@ -15,12 +15,6 @@ module.exports = {
         path: './src/pages/'
       },
       __key: 'pages'
-    },
-    {
-      resolve: 'gatsby-source-github-api-xposed-modules',
-      options: {
-        token: process.env.GRAPHQL_TOKEN
-      }
     }
   ]
 }

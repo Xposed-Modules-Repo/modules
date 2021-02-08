@@ -41,14 +41,12 @@ query ($nFirst: Int = 2, $q: String = "") {
 }
 `
 const DEFAULT_VARIABLES = { q: '', nFirst: 1 }
-const fetchFromAPI = (
-  url = GITHUB_URL,
-  token,
-  graphQLQuery = DEFAULT_QUERY,
-  variables = DEFAULT_VARIABLES
-) => {
-  const fetch = fetcher(url)
-  return fetchJSON(fetch, token, graphQLQuery, variables)
+const fetchFromAPI = (graphQLQuery = DEFAULT_QUERY) => {
+  if (process.env.GRAPHQL_TOKEN === undefined) {
+    throw 'token is undefined'
+  }
+  const fetch = fetcher(GITHUB_URL)
+  return fetchJSON(fetch, process.env.GRAPHQL_TOKEN, graphQLQuery, DEFAULT_VARIABLES)
 }
 
 async function fetchJSON (fetch, token, query, variables) {

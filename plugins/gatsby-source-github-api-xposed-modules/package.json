@@ -1,6 +1,0 @@
-{
-  "name": "gatsby-source-github-api-xposed-modules",
-  "version": "0.2.1",
-  "description": "gatsby plugin for github v4 API",
-  "main": "index.js"
-}
