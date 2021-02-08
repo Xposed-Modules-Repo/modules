@@ -37,7 +37,7 @@ function makeRepositoriesQuery (cursor) {
           description
           url
           homepageUrl
-          collaborators(affiliation: ALL, first: 20) {
+          collaborators(affiliation: OUTSIDE, first: 100) {
             edges {
               node {
                 login
