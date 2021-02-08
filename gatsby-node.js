@@ -33,11 +33,15 @@ exports.onPostBuild = async ({ graphql }) => {
                   }
                 }
               }
+              readme {
+                text
+              }
               releases {
                 edges {
                   node {
                     name
                     url
+                    description
                     descriptionHTML
                     updatedAt
                     tagName
@@ -54,6 +58,9 @@ exports.onPostBuild = async ({ graphql }) => {
                   }
                 }
               }
+              summary {
+                text
+              }
             }
             cursor
           }
@@ -64,7 +71,12 @@ exports.onPostBuild = async ({ graphql }) => {
 }`)
   const postsPath = './public'
   flatten(result)
-  const modules = result.data.githubData.data.organization.repositories
+  let modules
+  try {
+    modules = result.data.githubData.data.organization.repositories
+  } catch (e) {
+    throw new Error(`${e.message}, ${JSON.stringify(result)}`)
+  }
   if (!fs.existsSync(postsPath)) fs.mkdirSync(postsPath, { recursive: true })
   fs.writeFileSync(`${postsPath}/modules.json`, JSON.stringify(modules))
 }

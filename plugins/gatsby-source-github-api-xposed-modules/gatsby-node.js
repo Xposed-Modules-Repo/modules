@@ -44,7 +44,12 @@ function makeRepositoriesQuery (cursor) {
               }
             }
           }
-          object(expression: "main:SUMMARY.md") {
+          summary: object(expression: "HEAD:SUMMARY") {
+            ... on Blob {
+              text
+            }
+          }
+          readme: object(expression: "HEAD:README.md") {
             ... on Blob {
               text
             }
@@ -54,6 +59,7 @@ function makeRepositoriesQuery (cursor) {
               node {
                 name
                 url
+                description
                 descriptionHTML
                 updatedAt
                 tagName
