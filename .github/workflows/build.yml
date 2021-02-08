@@ -12,6 +12,11 @@ jobs:
       - uses: actions/checkout@master
         with:
           fetch-depth: 1
+      - uses: actions/cache@v2
+        with:
+          path: |
+            **/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('yarn.lock') }}
       - uses: JamesIves/github-pages-deploy-action@master
         env:
           ACCESS_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
