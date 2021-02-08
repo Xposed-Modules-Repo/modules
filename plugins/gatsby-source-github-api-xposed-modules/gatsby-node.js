@@ -33,6 +33,7 @@ function makeRepositoriesQuery (cursor) {
     repositories(first: ${PAGINATION}${arg}) {
       edges {
         node {
+          name
           description
           url
           homepageUrl

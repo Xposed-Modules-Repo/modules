@@ -22,6 +22,7 @@ exports.onPostBuild = async ({ graphql }) => {
         repositories {
           edges {
             node {
+              name
               description
               url
               homepageUrl
