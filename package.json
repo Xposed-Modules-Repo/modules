@@ -1,1 +1,33 @@
-{"name":"modules","version":"1.0.0","private":true,"description":"modules","author":"Riko Sakurauchi","keywords":["gatsby"],"scripts":{"develop":"gatsby develop","start":"gatsby develop","build":"gatsby build","serve":"gatsby serve","clean":"gatsby clean"},"dependencies":{"gatsby":"^2.32.3","gatsby-plugin-postcss":"^3.7.0","gatsby-plugin-react-helmet":"^3.10.0","gatsby-plugin-sitemap":"^2.12.0","gatsby-source-filesystem":"^2.11.0","gatsby-transformer-remark":"^2.16.0","postcss":"^8.2.5","react":"^16.13.1","react-dom":"^16.13.1","react-helmet":"^6.1.0"}}
+{
+  "name": "modules",
+  "version": "1.0.0",
+  "private": true,
+  "description": "modules",
+  "author": "Riko Sakurauchi",
+  "keywords": [
+    "gatsby"
+  ],
+  "scripts": {
+    "develop": "gatsby develop",
+    "start": "gatsby develop",
+    "build": "gatsby build",
+    "serve": "gatsby serve",
+    "clean": "gatsby clean",
+    "lint": "standard --fix"
+  },
+  "dependencies": {
+    "gatsby": "^2.32.3",
+    "gatsby-plugin-postcss": "^3.7.0",
+    "gatsby-plugin-react-helmet": "^3.10.0",
+    "gatsby-plugin-sitemap": "^2.12.0",
+    "gatsby-source-filesystem": "^2.11.0",
+    "gatsby-transformer-remark": "^2.16.0",
+    "graphql-fetch": "^1.0.1",
+    "postcss": "^8.2.5",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-helmet": "^6.1.0",
+    "standard": "*",
+    "uuid": "^3.1.0"
+  }
+}

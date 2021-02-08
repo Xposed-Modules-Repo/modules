@@ -1,0 +1,20 @@
+name: Build
+on: [push]
+
+jobs:
+  build:
+    name: Build Website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+      - uses: JamesIves/github-pages-deploy-action@master
+        env:
+          ACCESS_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
+          GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
+          BASE_BRANCH: master # The branch the action should deploy from.
+          BRANCH: gh-pages # The branch the action should deploy to.
+          FOLDER: public # The folder the action should deploy.
+          BUILD_SCRIPT: npm install && npm run build
+          CNAME: modules.lsposed.workers.dev
