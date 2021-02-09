@@ -138,6 +138,34 @@ function flatten (object) {
   }
 }
 
+function parseNestedObject (repo) {
+  if (repo.summary) {
+    repo.summary = repo.summary.text.trim()
+  }
+  if (repo.readme) {
+    repo.readme = repo.readme.text
+  }
+  if (repo.sourceUrl) {
+    repo.sourceUrl = repo.sourceUrl.text.replace(/[\r\n]/g, '').trim()
+  }
+  if (repo.additionalAuthors) {
+    try {
+      repo.additionalAuthors = JSON.parse(repo.additionalAuthors.text)
+    } catch (e) {
+      repo.additionalAuthors = null
+    }
+  }
+  if (repo.scope) {
+    try {
+      repo.scope = JSON.parse(repo.scope.text)
+    } catch (e) {
+      repo.scope = null
+    }
+  }
+  repo.hide = !!repo.hide
+  return repo
+}
+
 exports.onPostBuild = async ({ graphql }) => {
   const result = await graphql(`
 {
@@ -215,7 +243,7 @@ exports.onPostBuild = async ({ graphql }) => {
   try {
     modules = result.data.githubData.data.organization.repositories.filter((repo) => (
       repo.name.match(/\./) && repo.name !== 'org.meowcat.example'
-    ))
+    )).map((repo) => parseNestedObject(repo))
   } catch (e) {
     throw new Error(`${e.message}, ${JSON.stringify(result)}`)
   }
