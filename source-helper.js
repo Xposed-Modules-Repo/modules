@@ -43,14 +43,14 @@ query ($nFirst: Int = 2, $q: String = "") {
 const DEFAULT_VARIABLES = { q: '', nFirst: 1 }
 const fetchFromAPI = (graphQLQuery = DEFAULT_QUERY) => {
   if (process.env.GRAPHQL_TOKEN === undefined) {
-    throw 'token is undefined'
+    throw new Error('token is undefined')
   }
   const fetch = fetcher(GITHUB_URL)
   return fetchJSON(fetch, process.env.GRAPHQL_TOKEN, graphQLQuery, DEFAULT_VARIABLES)
 }
 
 async function fetchJSON (fetch, token, query, variables) {
-  const headers = new Headers()
+  const headers = new global.Headers()
   headers.set('Authorization', `Bearer ${token}`)
   return await fetch(query, variables, {
     headers,

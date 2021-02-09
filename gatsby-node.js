@@ -8,7 +8,7 @@ function makeRepositoriesQuery (cursor) {
   return `
 {
   organization(login: "Xposed-Modules-Repo") {
-    repositories(first: ${PAGINATION}${arg}) {
+    repositories(first: ${PAGINATION}${arg}, orderBy: {field: UPDATED_AT, direction: DESC}) {
       edges {
         node {
           name
@@ -77,6 +77,7 @@ function makeRepositoriesQuery (cursor) {
               }
             }
           }
+          stargazerCount
         }
         cursor
       }
@@ -229,6 +230,7 @@ exports.onPostBuild = async ({ graphql }) => {
               additionalAuthors {
                 text
               }
+              stargazerCount
             }
             cursor
           }
