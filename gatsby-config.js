@@ -4,6 +4,7 @@ module.exports = {
     siteUrl: 'https://modules.lsposed.workers.dev'
   },
   plugins: [
+    'gatsby-plugin-material-ui',
     'gatsby-plugin-postcss',
     'gatsby-plugin-stylus',
     'gatsby-plugin-react-helmet',
