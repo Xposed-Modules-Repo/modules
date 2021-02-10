@@ -77,6 +77,8 @@ function makeRepositoriesQuery (cursor) {
               }
             }
           }
+          updatedAt
+          createdAt
           stargazerCount
         }
         cursor
@@ -230,6 +232,8 @@ exports.onPostBuild = async ({ graphql }) => {
               additionalAuthors {
                 text
               }
+              updatedAt
+              createdAt
               stargazerCount
             }
             cursor
