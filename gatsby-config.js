@@ -11,7 +11,14 @@ module.exports = {
     'gatsby-plugin-stylus',
     'gatsby-plugin-react-helmet',
     'gatsby-plugin-sitemap',
-    'gatsby-transformer-remark',
+    {
+      resolve: 'gatsby-transformer-remark',
+      options: {
+        plugins: [
+          'gatsby-remark-external-links'
+        ]
+      }
+    },
     {
       resolve: 'gatsby-plugin-nprogress',
       options: {

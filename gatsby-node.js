@@ -131,7 +131,22 @@ function parseRepositoryObject (repo) {
   }
   if (repo.additionalAuthors) {
     try {
-      repo.additionalAuthors = JSON.parse(repo.additionalAuthors.text)
+      const additionalAuthors = JSON.parse(repo.additionalAuthors.text)
+      const validAuthors = []
+      if (additionalAuthors instanceof Array) {
+        for (const author of additionalAuthors) {
+          if (author && typeof author === 'object') {
+            const validAuthor = {}
+            for (const key of Object.keys(author)) {
+              if (['type', 'name', 'link'].indexOf(key) !== -1) {
+                validAuthor[key] = author[key]
+              }
+            }
+            validAuthors.push(validAuthor)
+          }
+        }
+      }
+      repo.additionalAuthors = validAuthors
     } catch (e) {
       repo.additionalAuthors = null
     }
