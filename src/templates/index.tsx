@@ -5,6 +5,7 @@ import Pagination from '@material-ui/lab/Pagination'
 import PaginationItem from '@material-ui/lab/PaginationItem'
 import RepoCard, { RepoCardProps } from '../components/repo-card'
 import { graphql, Link } from 'gatsby'
+import SEO from '../components/seo'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -46,6 +47,7 @@ export default function IndexPage ({ data }: any): React.ReactElement {
   }
   return (
     <Layout>
+      <SEO title={'Browse Modules'} />
       <h1 className={classes.title}>Xposed Module Repository</h1>
       <div className={classes.container}>
           {data.allGithubRepository.edges

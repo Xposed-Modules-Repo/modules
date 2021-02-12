@@ -2,10 +2,12 @@ import { ReactElement } from 'react'
 import Layout from '../layout'
 import * as React from 'react'
 import { graphql } from 'gatsby'
+import SEO from '../components/seo'
 
-export default function ModulePage (): ReactElement {
+export default function ModulePage ({ data }: any): ReactElement {
   return (
     <Layout>
+      <SEO title={data.githubRepository.description} />
       {}
     </Layout>
   )

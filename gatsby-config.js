@@ -1,7 +1,9 @@
 module.exports = {
   siteMetadata: {
-    title: 'modules',
-    siteUrl: 'https://modules.lsposed.workers.dev'
+    title: 'Xposed Module Repository',
+    siteUrl: 'https://modules.lsposed.org',
+    description: 'New Xposed Module Repository',
+    author: 'https://github.com/Xposed-Modules-Repo/modules/graphs/contributors'
   },
   plugins: [
     'gatsby-plugin-material-ui',
