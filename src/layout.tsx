@@ -18,6 +18,7 @@ import MenuIcon from '@material-ui/icons/Menu'
 import Typography from '@material-ui/core/Typography'
 import SearchIcon from '@material-ui/icons/Search'
 import InputBase from '@material-ui/core/InputBase'
+import AppsIcon from '@material-ui/icons/Apps'
 import PublishIcon from '@material-ui/icons/Publish'
 import './styles.styl'
 import { Link } from 'gatsby'
@@ -146,6 +147,10 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
         </AppBar>
         <Drawer open={isDrawerOpen} onClose={toggleDrawer}>
           <List className={classes.list}>
+            <ListItem button component={Link} to={'/'}>
+              <ListItemIcon><AppsIcon /></ListItemIcon>
+              <ListItemText primary="Browse" />
+            </ListItem>
             <ListItem button component={Link} to={'/submission'}>
               <ListItemIcon><PublishIcon /></ListItemIcon>
               <ListItemText primary="Submission" />
