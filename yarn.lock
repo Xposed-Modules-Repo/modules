@@ -1208,6 +1208,17 @@
   dependencies:
     "@babel/runtime" "^7.4.4"
 
+"@material-ui/lab@^4.0.0-alpha.57":
+  version "4.0.0-alpha.57"
+  resolved "https://registry.npm.taobao.org/@material-ui/lab/download/@material-ui/lab-4.0.0-alpha.57.tgz#e8961bcf6449e8a8dabe84f2700daacfcafbf83a"
+  integrity sha1-6JYbz2RJ6KjavoTycA2qz8r7+Do=
+  dependencies:
+    "@babel/runtime" "^7.4.4"
+    "@material-ui/utils" "^4.11.2"
+    clsx "^1.0.4"
+    prop-types "^15.7.2"
+    react-is "^16.8.0 || ^17.0.0"
+
 "@material-ui/styles@^4.11.3":
   version "4.11.3"
   resolved "https://registry.npm.taobao.org/@material-ui/styles/download/@material-ui/styles-4.11.3.tgz?cache=0&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2F%40material-ui%2Fstyles%2Fdownload%2F%40material-ui%2Fstyles-4.11.3.tgz#1b8d97775a4a643b53478c895e3f2a464e8916f2"
@@ -5592,6 +5603,14 @@ gatsby-plugin-material-ui@^2.1.10:
     clean-css "^4.2.1"
     postcss "^7.0.17"
 
+gatsby-plugin-nprogress@^2.10.0:
+  version "2.10.0"
+  resolved "https://registry.npm.taobao.org/gatsby-plugin-nprogress/download/gatsby-plugin-nprogress-2.10.0.tgz#93c3413bf23fda7db16bd84d1550c16438f0bd5e"
+  integrity sha1-k8NBO/I/2n2xa9hNFVDBZDjwvV4=
+  dependencies:
+    "@babel/runtime" "^7.12.5"
+    nprogress "^0.2.0"
+
 gatsby-plugin-page-creator@^2.10.0:
   version "2.10.0"
   resolved "https://registry.npm.taobao.org/gatsby-plugin-page-creator/download/gatsby-plugin-page-creator-2.10.0.tgz#81adbe8b03ef46f1553bb5b68abd6c85d3c25433"
@@ -8723,6 +8742,11 @@ npm-run-path@^4.0.0:
   integrity sha1-t+zR5e1T2o43pV4cImnguX7XSOo=
   dependencies:
     path-key "^3.0.0"
+
+nprogress@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.npm.taobao.org/nprogress/download/nprogress-0.2.0.tgz#cb8f34c53213d895723fcbab907e9422adbcafb1"
+  integrity sha1-y480xTIT2JVyP8urkH6UIq28r7E=
 
 nth-check@^1.0.1, nth-check@^1.0.2:
   version "1.0.2"

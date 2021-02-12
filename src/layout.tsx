@@ -10,6 +10,7 @@ import Typography from '@material-ui/core/Typography'
 import SearchIcon from '@material-ui/icons/Search'
 import InputBase from '@material-ui/core/InputBase'
 import './styles.styl'
+import { Link } from 'gatsby'
 
 const theme = createMuiTheme({
   palette: {
@@ -32,6 +33,10 @@ const useStyles = makeStyles((theme: Theme) =>
       [theme.breakpoints.up('sm')]: {
         display: 'block'
       }
+    },
+    h1: {
+      textDecoration: 'none',
+      color: 'inherit'
     },
     search: {
       position: 'relative',
@@ -98,9 +103,13 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
             >
               <MenuIcon />
             </IconButton>
-            <Typography className={classes.title} variant="h6" noWrap>
-              Xposed Module Repository
-            </Typography>
+            <div className={classes.title}>
+              <Typography variant="h6" noWrap className={classes.h1}
+                          component={Link} to={'/'}
+              >
+                Xposed Module Repository
+              </Typography>
+            </div>
             <div className={classes.search}>
               <div className={classes.searchIcon}>
                 <SearchIcon />

@@ -1,6 +1,9 @@
 const fs = require('fs')
+const uuid = require('uuid')
+const crypto = require('crypto')
+const path = require('path')
 
-const { fetchFromGithub, generateGatsbyNode } = require('./source-helper')
+const { fetchFromGithub } = require('./github-source')
 
 const PAGINATION = 100
 function makeRepositoriesQuery (cursor) {
@@ -93,6 +96,100 @@ function makeRepositoriesQuery (cursor) {
 }`
 }
 
+const generateGatsbyNode = (result, createNode) => {
+  createNode({
+    data: result.data,
+    id: result.id || uuid(),
+    // see https://github.com/ldd/gatsby-source-github-api/issues/19
+    // provide the raw result to see errors, or other information
+    rawResult: result,
+    parent: null,
+    children: [],
+    internal: {
+      type: 'GithubData',
+      contentDigest: crypto
+        .createHash('md5')
+        .update(JSON.stringify(result))
+        .digest('hex'),
+      // see https://github.com/ldd/gatsby-source-github-api/issues/10
+      // our node should have an 'application/json' MIME type, but we wish
+      // transformers to ignore it, so we set its mediaType to text/plain for now
+      mediaType: 'text/plain'
+    }
+  })
+}
+
+function parseRepositoryObject (repo) {
+  if (repo.summary) {
+    repo.summary = repo.summary.text.trim()
+  }
+  if (repo.readme) {
+    repo.readme = repo.readme.text
+  }
+  if (repo.sourceUrl) {
+    repo.sourceUrl = repo.sourceUrl.text.replace(/[\r\n]/g, '').trim()
+  }
+  if (repo.additionalAuthors) {
+    try {
+      repo.additionalAuthors = JSON.parse(repo.additionalAuthors.text)
+    } catch (e) {
+      repo.additionalAuthors = null
+    }
+  }
+  if (repo.scope) {
+    try {
+      repo.scope = JSON.parse(repo.scope.text)
+    } catch (e) {
+      repo.scope = null
+    }
+  }
+  repo.hide = !!repo.hide
+  repo.isModule = repo.name.match(/\./) &&
+    repo.description &&
+    repo.name !== 'org.meowcat.example'
+  return repo
+}
+
+exports.onCreateNode = async ({
+  node,
+  actions,
+  createContentDigest
+}) => {
+  const { createNode } = actions
+  if (node.internal.type === 'GithubData' && node.data) {
+    for (let { node: repo } of node.data.organization.repositories.edges) {
+      repo = JSON.parse(JSON.stringify(repo))
+      repo = parseRepositoryObject(repo)
+      await createNode({
+        ...repo,
+        id: repo.name,
+        parent: null,
+        children: repo.readme ? [repo.name + '-readme'] : [],
+        internal: {
+          type: 'GithubRepository',
+          contentDigest: crypto
+            .createHash('md5')
+            .update(JSON.stringify(repo))
+            .digest('hex'),
+          mediaType: 'application/json'
+        }
+      })
+    }
+  }
+  if (node.internal.type === 'GithubRepository' && node.readme) {
+    createNode({
+      id: node.id + '-readme',
+      parent: node.id,
+      internal: {
+        type: 'GitHubReadme',
+        mediaType: 'text/markdown',
+        content: node.readme,
+        contentDigest: createContentDigest(node.readme)
+      }
+    })
+  }
+}
+
 exports.sourceNodes = async (
   { actions }
 ) => {
@@ -128,6 +225,56 @@ exports.sourceNodes = async (
   generateGatsbyNode(mergedResult, createNode)
 }
 
+exports.createPages = async ({ graphql, actions }) => {
+  const { createPage } = actions
+  const indexPageResult = await graphql(`
+{
+  allGithubRepository(limit: 30, filter: {isModule: {eq: true}, hide: {eq: false}}) {
+    pageInfo {
+      pageCount
+      perPage
+    }
+  }
+}`)
+  for (let i = 1; i <= indexPageResult.data.allGithubRepository.pageInfo.pageCount; i++) {
+    createPage({
+      path: `page/${i}`,
+      component: path.resolve('./src/templates/index.tsx'),
+      context: {
+        skip: (i - 1) * indexPageResult.data.allGithubRepository.pageInfo.perPage,
+        limit: indexPageResult.data.allGithubRepository.pageInfo.perPage
+      }
+    })
+  }
+  createPage({
+    path: '/',
+    component: path.resolve('./src/templates/index.tsx'),
+    context: {
+      skip: 0,
+      limit: indexPageResult.data.allGithubRepository.pageInfo.perPage
+    }
+  })
+  const modulePageResult = await graphql(`
+{
+  allGithubRepository(filter: {isModule: {eq: true}}) {
+    edges {
+      node {
+        name
+      }
+    }
+  }
+}`)
+  for (const { node: repo } of modulePageResult.data.allGithubRepository.edges) {
+    createPage({
+      path: `module/${repo.name}`,
+      component: path.resolve('./src/templates/module.tsx'),
+      context: {
+        name: repo.name
+      }
+    })
+  }
+}
+
 function flatten (object) {
   for (const key of Object.keys(object)) {
     if (object[key] !== null && object[key] !== undefined && typeof object[key] === 'object') {
@@ -141,118 +288,77 @@ function flatten (object) {
   }
 }
 
-function parseNestedObject (repo) {
-  if (repo.summary) {
-    repo.summary = repo.summary.text.trim()
-  }
-  if (repo.readme) {
-    repo.readme = repo.readme.text
-  }
-  if (repo.sourceUrl) {
-    repo.sourceUrl = repo.sourceUrl.text.replace(/[\r\n]/g, '').trim()
-  }
-  if (repo.additionalAuthors) {
-    try {
-      repo.additionalAuthors = JSON.parse(repo.additionalAuthors.text)
-    } catch (e) {
-      repo.additionalAuthors = null
-    }
-  }
-  if (repo.scope) {
-    try {
-      repo.scope = JSON.parse(repo.scope.text)
-    } catch (e) {
-      repo.scope = null
-    }
-  }
-  repo.hide = !!repo.hide
-  return repo
-}
-
 exports.onPostBuild = async ({ graphql }) => {
   const result = await graphql(`
 {
-  githubData {
-    data {
-      organization {
-        repositories {
+  allGithubRepository(filter: {isModule: {eq: true}, hide: {eq: false}}) {
+    edges {
+      node {
+        name
+        description
+        url
+        homepageUrl
+        collaborators {
+          edges {
+            node {
+              login
+              name
+            }
+          }
+        }
+        releases {
           edges {
             node {
               name
-              description
               url
-              homepageUrl
-              collaborators {
-                edges {
-                  node {
-                    login
-                    name
-                  }
-                }
-              }
-              releases {
-                edges {
-                  node {
-                    name
-                    url
-                    description
-                    descriptionHTML
-                    createdAt
-                    publishedAt
-                    updatedAt
-                    tagName
-                    isPrerelease
-                    releaseAssets {
-                      edges {
-                        node {
-                          name
-                          contentType
-                          downloadUrl
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              readme {
-                text
-              }
-              summary {
-                text
-              }
-              scope {
-                text
-              }
-              sourceUrl {
-                text
-              }
-              hide {
-                text
-              }
-              additionalAuthors {
-                text
-              }
-              updatedAt
+              description
+              descriptionHTML
               createdAt
-              stargazerCount
+              publishedAt
+              updatedAt
+              tagName
+              isPrerelease
+              releaseAssets {
+                edges {
+                  node {
+                    name
+                    contentType
+                    downloadUrl
+                  }
+                }
+              }
             }
-            cursor
           }
         }
+        readme
+        summary
+        scope
+        sourceUrl
+        hide
+        additionalAuthors {
+          type
+          name
+          link
+        }
+        updatedAt
+        createdAt
+        stargazerCount
       }
     }
   }
 }`)
-  const postsPath = './public'
+  const rootPath = './public'
+  if (!fs.existsSync(rootPath)) fs.mkdirSync(rootPath, { recursive: true })
   flatten(result)
-  let modules
-  try {
-    modules = result.data.githubData.data.organization.repositories.filter((repo) => (
-      repo.name.match(/\./) && repo.name !== 'org.meowcat.example'
-    )).map((repo) => parseNestedObject(repo))
-  } catch (e) {
-    throw new Error(`${e.message}, ${JSON.stringify(result)}`)
+  const modules = result.data.allGithubRepository
+  for (const repo of modules) {
+    const modulePath = path.join(rootPath, 'module')
+    if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
+    fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
+    repo.releases = repo.releases.length ? [repo.releases[0]] : []
+    for (const release of repo.releases) {
+      release.releaseAssets = release.releaseAssets.length ? [release.releaseAssets[0]] : []
+    }
   }
-  if (!fs.existsSync(postsPath)) fs.mkdirSync(postsPath, { recursive: true })
-  fs.writeFileSync(`${postsPath}/modules.json`, JSON.stringify(modules))
+  fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
 }

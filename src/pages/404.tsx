@@ -31,7 +31,6 @@ const useStyles = makeStyles((_: Theme) =>
   })
 )
 
-// markup
 const NotFoundPage = (): ReactElement => {
   const classes = useStyles()
   return (

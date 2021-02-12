@@ -11,6 +11,13 @@ module.exports = {
     'gatsby-plugin-sitemap',
     'gatsby-transformer-remark',
     {
+      resolve: 'gatsby-plugin-nprogress',
+      options: {
+        color: '#ff5252',
+        showSpinner: false
+      }
+    },
+    {
       resolve: 'gatsby-source-filesystem',
       options: {
         name: 'pages',

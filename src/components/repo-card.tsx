@@ -6,8 +6,10 @@ import CardActions from '@material-ui/core/CardActions'
 import CardContent from '@material-ui/core/CardContent'
 import Button from '@material-ui/core/Button'
 import Typography from '@material-ui/core/Typography'
+import { Link } from 'gatsby'
 
 export interface RepoCardProps {
+  name: string
   title: string
   summary: string
   url: string
@@ -47,7 +49,8 @@ export default function RepoCard (props: RepoCardProps): React.ReactElement {
   const classes = useStyles()
   return (
     <Card className={classes.root}>
-      <CardActionArea className={classes.actionArea}>
+      <CardActionArea className={classes.actionArea}
+                      component={Link} to={`/module/${props.name}`}>
         <CardContent className={classes.cardContent}>
           <Typography gutterBottom variant="h5" component="h2">
             {props.title}
@@ -61,13 +64,17 @@ export default function RepoCard (props: RepoCardProps): React.ReactElement {
       </CardActionArea>
       <CardActions>
         {props.url
-          ? (<Button size="small" color="secondary">
-               Website
-             </Button>)
+          ? (<Button size="small" color="secondary"
+                     href={props.url} target={'_blank'}
+          >
+              Website
+            </Button>)
           : ''
         }
         {props.sourceUrl
-          ? (<Button size="small" color="secondary">
+          ? (<Button size="small" color="secondary"
+                     href={props.sourceUrl} target={'_blank'}
+          >
               Source
              </Button>)
           : ''
