@@ -2,6 +2,7 @@ import * as React from 'react'
 import { ReactElement } from 'react'
 import Layout from '../layout'
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles'
+import SEO from '../components/seo'
 
 const useStyles = makeStyles((_: Theme) =>
   createStyles({
@@ -31,10 +32,11 @@ const useStyles = makeStyles((_: Theme) =>
   })
 )
 
-const NotFoundPage = (): ReactElement => {
+export default function NotFoundPage (): ReactElement {
   const classes = useStyles()
   return (
     <Layout>
+      <SEO title="Not Found" />
       <div className={classes.landing}>
         <div className={classes.centerBox}>
           <div className={classes.h1}>404</div>
@@ -44,5 +46,3 @@ const NotFoundPage = (): ReactElement => {
     </Layout>
   )
 }
-
-export default NotFoundPage

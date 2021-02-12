@@ -1,5 +1,14 @@
 import * as React from 'react'
-import { Container, createMuiTheme, MuiThemeProvider } from '@material-ui/core'
+import {
+  Container,
+  createMuiTheme,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  MuiThemeProvider
+} from '@material-ui/core'
 import { blue, red } from '@material-ui/core/colors'
 import { createStyles, fade, makeStyles, Theme } from '@material-ui/core/styles'
 import AppBar from '@material-ui/core/AppBar'
@@ -9,8 +18,10 @@ import MenuIcon from '@material-ui/icons/Menu'
 import Typography from '@material-ui/core/Typography'
 import SearchIcon from '@material-ui/icons/Search'
 import InputBase from '@material-ui/core/InputBase'
+import PublishIcon from '@material-ui/icons/Publish'
 import './styles.styl'
 import { Link } from 'gatsby'
+import { useState } from 'react'
 
 const theme = createMuiTheme({
   palette: {
@@ -85,12 +96,19 @@ const useStyles = makeStyles((theme: Theme) =>
       justifyContent: 'center',
       color: '#444',
       fontSize: 14
+    },
+    list: {
+      width: 250
     }
   })
 )
 
 export default function Layout (props: { children: React.ReactNode }): React.ReactElement {
   const classes = useStyles()
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const toggleDrawer = (): void => {
+    setIsDrawerOpen(!isDrawerOpen)
+  }
   return (
     <MuiThemeProvider theme={theme}>
       <div className={classes.root}>
@@ -100,6 +118,7 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
               className={classes.menuButton}
               color="inherit"
               aria-label="open drawer"
+              onClick={toggleDrawer}
             >
               <MenuIcon />
             </IconButton>
@@ -125,6 +144,14 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
             </div>
           </Toolbar>
         </AppBar>
+        <Drawer open={isDrawerOpen} onClose={toggleDrawer}>
+          <List className={classes.list}>
+            <ListItem button component={Link} to={'/submission'}>
+              <ListItemIcon><PublishIcon /></ListItemIcon>
+              <ListItemText primary="Submission" />
+            </ListItem>
+          </List>
+        </Drawer>
         <Container maxWidth="md">
           <>{props.children}</>
         </Container>

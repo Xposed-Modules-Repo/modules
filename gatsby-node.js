@@ -140,7 +140,7 @@ function parseRepositoryObject (repo) {
           if (author && typeof author === 'object') {
             const validAuthor = {}
             for (const key of Object.keys(author)) {
-              if (['type', 'name', 'link'].indexOf(key) !== -1) {
+              if (['type', 'name', 'link'].includes(key)) {
                 validAuthor[key] = author[key]
               }
             }

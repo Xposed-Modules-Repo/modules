@@ -23,6 +23,9 @@ const useStyles = makeStyles((theme: Theme) =>
     box: {
       padding: '24px 0',
       borderBottom: '1px solid #eaecef',
+      '&:first-child': {
+        paddingTop: '0.5rem'
+      },
       '&:last-child': {
         borderBottom: 'none'
       },
