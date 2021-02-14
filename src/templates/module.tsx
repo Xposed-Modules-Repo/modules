@@ -112,7 +112,7 @@ export default function ModulePage ({ data }: any): ReactElement {
             }
             {data.githubRepository.homepageUrl
               ? (<div className={classes.box}>
-                <h2 className={classes.h2}>Support/Discussion URL</h2>
+                <h2 className={classes.h2}>Support / Discussion URL</h2>
                 <p className={classes.p}>
                   <a href={data.githubRepository.homepageUrl}
                      target={'_blank'}
