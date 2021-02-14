@@ -15,7 +15,10 @@ const useStyles = makeStyles((theme: Theme) =>
       }
     },
     document: {
-      wordBreak: 'break-word'
+      wordBreak: 'break-word',
+      '& img': {
+        maxWidth: '100%'
+      }
     },
     plainDocument: {
       wordBreak: 'break-word'
