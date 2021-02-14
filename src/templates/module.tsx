@@ -18,6 +18,9 @@ const useStyles = makeStyles((theme: Theme) =>
       wordBreak: 'break-word',
       '& img': {
         maxWidth: '100%'
+      },
+      '& pre': {
+        whiteSpace: 'pre-wrap'
       }
     },
     plainDocument: {
