@@ -21,8 +21,13 @@ import InputBase from '@material-ui/core/InputBase'
 import AppsIcon from '@material-ui/icons/Apps'
 import PublishIcon from '@material-ui/icons/Publish'
 import './styles.styl'
-import { Link } from 'gatsby'
-import { useState } from 'react'
+import { Link, useStaticQuery, graphql } from 'gatsby'
+import { useEffect, useState } from 'react'
+import { useFlexSearch } from 'react-use-flexsearch'
+import FlexSearch from 'flexsearch'
+import * as flexsearchConfig from './flexsearch-config'
+import { useDebounce } from './debounce'
+import SearchResultCard from './components/search-result-card'
 
 const theme = createMuiTheme({
   palette: {
@@ -100,20 +105,69 @@ const useStyles = makeStyles((theme: Theme) =>
     },
     list: {
       width: 250
+    },
+    searchResult: {
+      position: 'absolute',
+      right: 0,
+      top: 'calc(100% + 8px)',
+      [theme.breakpoints.down('xs')]: {
+        right: -28
+      }
+    },
+    hide: {
+      display: 'none'
     }
   })
 )
 
+const index = FlexSearch.create(flexsearchConfig)
+
 export default function Layout (props: { children: React.ReactNode }): React.ReactElement {
   const classes = useStyles()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [isSearchFocused, _setIsSearchFocused] = useState(false)
+  const searchRef = React.createRef<HTMLInputElement>()
+  const setIsSearchFocused = (focused: boolean): void => {
+    _setIsSearchFocused(focused)
+    if (focused) {
+      searchRef.current?.focus()
+    } else {
+      searchRef.current?.blur()
+    }
+  }
+  useEffect(() => {
+    const blur = (): void => setIsSearchFocused(false)
+    window.addEventListener('click', blur)
+    return () => {
+      window.removeEventListener('click', blur)
+    }
+  })
+  const debouncedSearchKeyword = useDebounce(searchKeyword, 300)
+  const { localSearchRepositories } = useStaticQuery(graphql`
+{
+  localSearchRepositories {
+    index
+    store
+  }
+}
+`)
+  useEffect(() => {
+    index.import(localSearchRepositories.index)
+  }, [localSearchRepositories.index])
+  const searchResult = useFlexSearch(
+    debouncedSearchKeyword,
+    index,
+    localSearchRepositories.store,
+    5
+  )
   const toggleDrawer = (): void => {
     setIsDrawerOpen(!isDrawerOpen)
   }
   return (
     <MuiThemeProvider theme={theme}>
       <div className={classes.root}>
-        <AppBar position="static">
+        <AppBar position='sticky'>
           <Toolbar>
             <IconButton
               className={classes.menuButton}
@@ -130,7 +184,10 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
                 Xposed Module Repository
               </Typography>
             </div>
-            <div className={classes.search}>
+            <div
+              className={classes.search}
+              onClick={(e) => { setIsSearchFocused(true); e.stopPropagation() }}
+            >
               <div className={classes.searchIcon}>
                 <SearchIcon />
               </div>
@@ -140,7 +197,15 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
                   root: classes.inputRoot,
                   input: classes.inputInput
                 }}
+                inputRef={searchRef}
                 inputProps={{ 'aria-label': 'search' }}
+                value={searchKeyword}
+                onChange={(e) => { setSearchKeyword(e.target.value) }}
+              />
+              <SearchResultCard
+                className={`${classes.searchResult} ${isSearchFocused ? '' : classes.hide}`}
+                searchKeyword={debouncedSearchKeyword}
+                searchResult={searchResult}
               />
             </div>
           </Toolbar>
