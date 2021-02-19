@@ -167,7 +167,7 @@ export default function ModulePage ({ data }: any): ReactElement {
                   Release Type: {release.isPrerelease ? 'Pre-release' : 'Stable'}
                 </p>
                 <p className={classes.p}>
-                  {new Date(data.githubRepository.releases.edges[0].node.publishedAt).toLocaleString()}
+                  {new Date(release.publishedAt).toLocaleString()}
                 </p>
                 <div
                   className={classes.document}
