@@ -13,7 +13,7 @@ function makeRepositoriesQuery (cursor) {
   return `
 {
   organization(login: "Xposed-Modules-Repo") {
-    repositories(first: ${PAGINATION}${arg}, orderBy: {field: UPDATED_AT, direction: DESC}) {
+    repositories(first: ${PAGINATION}${arg}, orderBy: {field: UPDATED_AT, direction: DESC}, privacy: PUBLIC) {
       edges {
         node {
           name
