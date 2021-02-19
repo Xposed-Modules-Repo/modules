@@ -12,6 +12,14 @@ const useStyles = makeStyles((theme: Theme) =>
       margin: '30px 0',
       [theme.breakpoints.down('sm')]: {
         margin: '10px 0'
+      },
+      '& a': {
+        color: theme.palette.secondary.main
+      }
+    },
+    releases: {
+      '& a': {
+        color: theme.palette.secondary.main
       }
     },
     document: {
@@ -159,50 +167,52 @@ export default function ModulePage ({ data }: any): ReactElement {
         </Grid>
         {data.githubRepository.releases?.edges.length
           ? (<Grid item xs={12}>
-            <h1 id="releases">Releases</h1>
-            {data.githubRepository.releases.edges.slice(0, showReleaseNum).map(({ node: release }: any) => (
-              <div key={release.name}>
-                <h2><a href={release.url} target={'_blank'}>{release.name}</a></h2>
-                <p className={classes.p}>
-                  Release Type: {release.isPrerelease ? 'Pre-release' : 'Stable'}
-                </p>
-                <p className={classes.p}>
-                  {new Date(release.publishedAt).toLocaleString()}
-                </p>
-                <div
-                  className={classes.document}
-                  dangerouslySetInnerHTML={{
-                    __html: release.descriptionHTML
-                  }}
-                />
-                {release.releaseAssets?.edges.length
-                  ? (
-                    <div>
-                      <h3>Downloads</h3>
-                      <ul>
-                        {release.releaseAssets.edges.map(({ node: asset }: any) => (
-                          <li key={asset.name}>
-                            <a href={asset.downloadUrl} target={'_blank'}>{asset.name}</a>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>)
-                  : ''
-                }
-              </div>
-            ))}
-            {showReleaseNum !== data.githubRepository.releases.edges.length
-              ? (<p>
-                <a
-                  href=""
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setShowReleaseNum(showReleaseNum + 1)
-                  }}
-                >Show older versions</a>
-              </p>)
-              : ''
-            }
+            <div className={classes.releases}>
+              <h1 id="releases">Releases</h1>
+              {data.githubRepository.releases.edges.slice(0, showReleaseNum).map(({ node: release }: any) => (
+                <div key={release.name}>
+                  <h2><a href={release.url} target={'_blank'}>{release.name}</a></h2>
+                  <p className={classes.p}>
+                    Release Type: {release.isPrerelease ? 'Pre-release' : 'Stable'}
+                  </p>
+                  <p className={classes.p}>
+                    {new Date(release.publishedAt).toLocaleString()}
+                  </p>
+                  <div
+                    className={classes.document}
+                    dangerouslySetInnerHTML={{
+                      __html: release.descriptionHTML
+                    }}
+                  />
+                  {release.releaseAssets?.edges.length
+                    ? (
+                      <div>
+                        <h3>Downloads</h3>
+                        <ul>
+                          {release.releaseAssets.edges.map(({ node: asset }: any) => (
+                            <li key={asset.name}>
+                              <a href={asset.downloadUrl} target={'_blank'}>{asset.name}</a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>)
+                    : ''
+                  }
+                </div>
+              ))}
+              {showReleaseNum !== data.githubRepository.releases.edges.length
+                ? (<p>
+                  <a
+                    href=""
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setShowReleaseNum(showReleaseNum + 1)
+                    }}
+                  >Show older versions</a>
+                </p>)
+                : ''
+              }
+            </div>
           </Grid>)
           : ''
         }

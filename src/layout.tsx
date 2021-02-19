@@ -2,12 +2,14 @@ import * as React from 'react'
 import {
   Container,
   createMuiTheme,
+  CssBaseline,
   Drawer,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  MuiThemeProvider
+  MuiThemeProvider,
+  useMediaQuery
 } from '@material-ui/core'
 import { blue, red } from '@material-ui/core/colors'
 import { createStyles, fade, makeStyles, Theme } from '@material-ui/core/styles'
@@ -28,13 +30,6 @@ import FlexSearch from 'flexsearch'
 import * as flexsearchConfig from './flexsearch-config'
 import { useDebounce } from './debounce'
 import SearchResultCard from './components/search-result-card'
-
-const theme = createMuiTheme({
-  palette: {
-    primary: { main: blue[600] },
-    secondary: { main: red.A200 }
-  }
-})
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -100,7 +95,6 @@ const useStyles = makeStyles((theme: Theme) =>
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#444',
       fontSize: 14
     },
     list: {
@@ -164,8 +158,20 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
   const toggleDrawer = (): void => {
     setIsDrawerOpen(!isDrawerOpen)
   }
+  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)')
+  const theme = React.useMemo(
+    () => createMuiTheme({
+      palette: {
+        type: prefersDarkMode ? 'dark' : 'light',
+        primary: { main: prefersDarkMode ? '#333' : blue[600] },
+        secondary: { main: red.A200 }
+      }
+    }),
+    [prefersDarkMode]
+  )
   return (
     <MuiThemeProvider theme={theme}>
+      <CssBaseline />
       <div className={classes.root}>
         <AppBar position='sticky'>
           <Toolbar>
