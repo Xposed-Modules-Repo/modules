@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createStyles, makeStyles } from '@material-ui/core/styles'
+import { createStyles, fade, makeStyles } from '@material-ui/core/styles'
 import { SearchResult } from 'react-use-flexsearch'
 import { Paper } from '@material-ui/core'
 import Typography from '@material-ui/core/Typography'
@@ -36,7 +36,9 @@ const useStyles = makeStyles((theme) =>
         borderBottom: 'none'
       },
       '&:hover': {
-        background: 'rgba(25, 25, 25, 0.1)'
+        background: theme.palette.type === 'light'
+          ? fade(theme.palette.common.black, 0.1)
+          : fade(theme.palette.common.white, 0.1)
       },
       cursor: 'pointer',
       display: 'block',

@@ -63,7 +63,7 @@ export default function IndexPage ({ data }: any): React.ReactElement {
           <Pagination
             page={data.allGithubRepository.pageInfo.currentPage}
             count={data.allGithubRepository.pageInfo.pageCount}
-            color="primary"
+            color="secondary"
             renderItem={(item) => (
               <PaginationItem
                 component={Link}

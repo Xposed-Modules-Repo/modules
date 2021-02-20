@@ -11,7 +11,7 @@ import {
   MuiThemeProvider,
   useMediaQuery
 } from '@material-ui/core'
-import { blue, red } from '@material-ui/core/colors'
+import { blue } from '@material-ui/core/colors'
 import { createStyles, fade, makeStyles, Theme } from '@material-ui/core/styles'
 import AppBar from '@material-ui/core/AppBar'
 import Toolbar from '@material-ui/core/Toolbar'
@@ -166,7 +166,7 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
       palette: {
         type: prefersDarkMode ? 'dark' : 'light',
         primary: { main: prefersDarkMode ? '#333' : blue[600] },
-        secondary: { main: red.A200 }
+        secondary: { main: blue[500] }
       }
     }),
     [prefersDarkMode]
