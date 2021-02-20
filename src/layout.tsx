@@ -158,7 +158,9 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
   const toggleDrawer = (): void => {
     setIsDrawerOpen(!isDrawerOpen)
   }
-  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)')
+  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)', {
+    noSsr: true
+  })
   const theme = React.useMemo(
     () => createMuiTheme({
       palette: {
