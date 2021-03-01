@@ -33,6 +33,7 @@
     "flexsearch": "^0.6.32",
     "gatsby": "^2.32.3",
     "gatsby-plugin-local-search": "^2.0.0",
+    "gatsby-plugin-manifest": "^2.12.1",
     "gatsby-plugin-material-ui": "^2.1.10",
     "gatsby-plugin-nprogress": "^2.10.0",
     "gatsby-plugin-postcss": "^3.7.0",

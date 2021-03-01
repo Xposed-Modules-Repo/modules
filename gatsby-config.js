@@ -14,6 +14,18 @@ module.exports = {
     'gatsby-plugin-react-helmet',
     'gatsby-plugin-sitemap',
     {
+      resolve: 'gatsby-plugin-manifest',
+      options: {
+        name: 'Xposed Module Repository',
+        short_name: 'Xposed Module Repo',
+        start_url: '/',
+        background_color: '#1e88e5',
+        theme_color: '#1e88e5',
+        display: 'minimal-ui',
+        icon: 'src/images/favicon.png' // This path is relative to the root of the site.
+      }
+    },
+    {
       resolve: 'gatsby-transformer-remark',
       options: {
         plugins: [
