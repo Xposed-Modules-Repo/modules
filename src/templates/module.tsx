@@ -6,9 +6,17 @@ import SEO from '../components/seo'
 import Module from '../components/module'
 
 export default function ModulePage ({ data }: any): ReactElement {
+  const getSummary = (repo: any): string => {
+    let summary = ''
+    if (repo.summary) summary = repo.summary
+    else if (repo.childGitHubReadme) {
+      summary = repo.childGitHubReadme.childMarkdownRemark.excerpt
+    }
+    return summary
+  }
   return (
     <Layout>
-      <SEO title={data.githubRepository.description} />
+      <SEO title={data.githubRepository.description} description={getSummary(data.githubRepository)} />
       <Module data={data} />
     </Layout>
   )
@@ -41,6 +49,7 @@ query ($name: String!) {
     childGitHubReadme {
       childMarkdownRemark {
         html
+        excerpt
       }
     }
     releases {
