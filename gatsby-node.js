@@ -374,9 +374,6 @@ exports.onPostBuild = async ({ graphql }) => {
     if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = repo.releases.length ? [repo.releases[0]] : []
-    for (const release of repo.releases) {
-      release.releaseAssets = release.releaseAssets.length ? [release.releaseAssets[0]] : []
-    }
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
 
