@@ -164,6 +164,7 @@ function parseRepositoryObject (repo) {
   repo.isModule = repo.name.match(/\./) &&
     repo.description &&
     repo.releases &&
+    repo.releases.length &&
     repo.name !== 'org.meowcat.example'
   return repo
 }
