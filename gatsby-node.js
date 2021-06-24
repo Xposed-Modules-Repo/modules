@@ -429,7 +429,8 @@ exports.onPostBuild = async ({ graphql }) => {
   for (const file of jsonFiles) {
     console.log(file)
     const newFilename = file.replace('page-data.json', `page-data.${hash}.json`)
-    await fs.renameSync(file, newFilename)
+    // Renaming makes cache fails, so copy instead
+    await fs.copyFileSync(file, newFilename)
   }
   const appShaFiles = glob.sync(`${publicPath}/**/app-*.js`)
   const [appShaFile] = appShaFiles
@@ -437,9 +438,10 @@ exports.onPostBuild = async ({ graphql }) => {
   const appShaFilenameReg = new RegExp(appShaFilename, 'g')
   const newAppShaFilename = `app-${hash}.js`
   const newFilePath = appShaFile.replace(appShaFilename, newAppShaFilename)
-  console.log(`[onPostBuild] Renaming: ${appShaFilename} to ${newAppShaFilename}`)
-  await fs.renameSync(appShaFile, newFilePath)
-  await fs.renameSync(`${appShaFile}.map`, `${newFilePath}.map`)
+  console.log(`[onPostBuild] Copying: ${appShaFilename} to ${newAppShaFilename}`)
+  // Renaming makes cache fails, so copy instead
+  await fs.copyFileSync(appShaFile, newFilePath)
+  await fs.copyFileSync(`${appShaFile}.map`, `${newFilePath}.map`)
   const htmlJSAndJSONFiles = [
     `${newFilePath}.map`,
     ...glob.sync(`${publicPath}/**/*.{html,js,json}`)
