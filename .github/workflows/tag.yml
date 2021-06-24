@@ -8,6 +8,10 @@ on:
       release:
         description: 'release id'
         required: true
+      apk:
+        description: 'apk url'
+        required: true
+        default: 'null'
 
 jobs:
   say_hello:
