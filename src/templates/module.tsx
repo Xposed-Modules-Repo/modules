@@ -9,6 +9,9 @@ export default function ModulePage ({ data }: any): ReactElement {
   const getSummary = (repo: any): string => {
     let summary = ''
     if (repo.summary) summary = repo.summary
+    else if (repo.readmeHTML) {
+      summary = repo.readmeHTML
+    }
     else if (repo.childGitHubReadme) {
       summary = repo.childGitHubReadme.childMarkdownRemark.excerpt
     }
@@ -38,6 +41,7 @@ query ($name: String!) {
       }
     }
     readme
+    readmeHTML
     summary
     sourceUrl
     hide

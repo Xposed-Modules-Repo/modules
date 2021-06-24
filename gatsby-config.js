@@ -62,6 +62,7 @@ module.exports = {
           }
         }
         readme
+        readmeHTML
         childGitHubReadme {
           childMarkdownRemark {
             excerpt(pruneLength: 250, truncate: true)
