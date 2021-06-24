@@ -139,7 +139,7 @@ async function parseRepositoryObject (repo, cache) {
         method: 'POST',
 	headers: headers,
         body: repo.readme,
-      }).then(response => response.text());
+      }).then(response => response.ok ? response.text() : null);
     }
     obj.lastChecked = Date.now()
     await cache.set(cacheKey, obj)
@@ -370,6 +370,11 @@ exports.onPostBuild = async ({ graphql }) => {
         }
         readme
 	readmeHTML
+        childGitHubReadme {
+          childMarkdownRemark {
+            html
+          }
+        }
         summary
         scope
         sourceUrl
@@ -395,6 +400,7 @@ exports.onPostBuild = async ({ graphql }) => {
     if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = repo.releases.length ? [repo.releases[0]] : []
+    if (!repo.readmeHTML) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
 
