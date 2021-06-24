@@ -350,6 +350,11 @@ exports.onPostBuild = async ({ graphql }) => {
           }
         }
         readme
+        childGitHubReadme {
+          childMarkdownRemark {
+            html
+          }
+        }
         summary
         scope
         sourceUrl
