@@ -122,34 +122,12 @@ const generateGatsbyNode = (result, createNode) => {
   })
 }
 
-async function parseRepositoryObject (repo, cache) {
+function parseRepositoryObject (repo) {
   if (repo.summary) {
     repo.summary = repo.summary.text.trim()
   }
   if (repo.readme) {
     repo.readme = repo.readme.text
-    const cacheKey = crypto.createHash('md5').update(repo.readme).digest('hex')
-    let obj = await cache.get(cacheKey)
-    if (!obj) {
-      obj = { created: Date.now() }
-      const headers = new fetch.Headers()
-      headers.set('Authorization', `Bearer ${process.env.GRAPHQL_TOKEN}`)
-      headers.set('Content-Type', 'text/plain')
-      headers.set('Accept', '*/*')
-      console.log(`fetching readme: ${repo.name}`)
-      const response = await fetch('https://api.github.com/markdown/raw', {
-        method: 'POST',
-        headers: headers,
-        body: repo.readme
-      })
-      obj.data = response.ok ? await response.text() : null
-    } else {
-      console.log(`readme: ${repo.name} read from cache`)
-    }
-    obj.lastChecked = Date.now()
-    await cache.set(cacheKey, obj)
-
-    repo.readmeHTML = obj.data
   }
   if (repo.sourceUrl) {
     repo.sourceUrl = repo.sourceUrl.text.replace(/[\r\n]/g, '').trim()
@@ -192,6 +170,38 @@ async function parseRepositoryObject (repo, cache) {
   return repo
 }
 
+async function fetchRenderedReadme (repo, cache) {
+  if (repo.readme) {
+    const cacheKey = crypto.createHash('md5').update(repo.readme).digest('hex')
+    let obj = await cache.get(cacheKey)
+    if (!obj) {
+      try {
+        obj = { created: Date.now() }
+        const headers = new fetch.Headers()
+        headers.set('Authorization', `Bearer ${process.env.GRAPHQL_TOKEN}`)
+        headers.set('Content-Type', 'text/plain')
+        headers.set('Accept', '*/*')
+        console.log(`fetching readme: ${repo.name}`)
+        const response = await fetch('https://api.github.com/markdown/raw', {
+          method: 'POST',
+          headers: headers,
+          body: repo.readme
+        })
+        obj.data = response.ok ? await response.text() : null
+        obj.lastChecked = Date.now()
+        await cache.set(cacheKey, obj)
+      } catch (e) {
+        console.error(e)
+        obj = { data: null }
+      }
+    } else {
+      console.log(`readme: ${repo.name} read from cache`)
+    }
+    repo.readmeHTML = obj.data
+  }
+  return repo
+}
+
 exports.onCreateNode = async ({
   node,
   actions,
@@ -202,7 +212,8 @@ exports.onCreateNode = async ({
   if (node.internal.type === 'GithubData' && node.data) {
     for (let { node: repo } of node.data.organization.repositories.edges) {
       repo = JSON.parse(JSON.stringify(repo))
-      repo = await parseRepositoryObject(repo, cache)
+      repo = parseRepositoryObject(repo)
+      repo = await fetchRenderedReadme(repo, cache)
       await createNode({
         ...repo,
         id: repo.name,
