@@ -136,12 +136,15 @@ async function parseRepositoryObject (repo, cache) {
       headers.set('Authorization', `Bearer ${process.env.GRAPHQL_TOKEN}`)
       headers.set('Content-Type', 'text/plain')
       headers.set('Accept', '*/*')
+      console.log(`fetching readme: ${repo.name}`)
       const response = await fetch('https://api.github.com/markdown/raw', {
         method: 'POST',
         headers: headers,
         body: repo.readme
       })
       obj.data = response.ok ? await response.text() : null
+    } else {
+      console.log(`readme: ${repo.name} read from cache`)
     }
     obj.lastChecked = Date.now()
     await cache.set(cacheKey, obj)
