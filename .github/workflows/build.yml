@@ -17,31 +17,31 @@ jobs:
       - uses: actions/checkout@master
         with:
           fetch-depth: 1
-      - name: cache node modules
+      - name: Yarn cache directory
+        id: yarn-cache-dir
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: cache yarn modules
         uses: actions/cache@v2
         with:
-          path: |
-            **/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: ${{ runner.os }}-node-
+          path: ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-yarn-
       - name: cache gatsby cache
         uses: actions/cache@v2
         with:
-          path: |
-            .cache
+          path: .cache
           key: ${{ runner.os }}-gatsby-cache-${{ github.run_id }}
           restore-keys: ${{ runner.os }}-gatsby-cache-
       - name: cache gatsby public
         uses: actions/cache@v2
         with:
-          path: |
-            public
+          path: public
           key: ${{ runner.os }}-gatsby-public-${{ github.run_id }}
           restore-keys: ${{ runner.os }}-gatsby-public-
-      - name: Install and Build 🔧 # This example project is built using npm and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
+      - name: Install and Build 🔧 # This example project is built using yarn and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
         run: |
-          npm install
-          npm run build
+          yarn install --pure-lockfile
+          yarn build
           echo "modules.lsposed.org" > ./public/CNAME
         env:
           GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
