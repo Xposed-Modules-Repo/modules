@@ -4,6 +4,7 @@ const crypto = require('crypto')
 const path = require('path')
 const glob = require('glob')
 const md5 = require('uuid')
+const fetch = require('node-fetch')
 
 const { fetchFromGithub } = require('./github-source')
 
@@ -131,15 +132,16 @@ async function parseRepositoryObject (repo, cache) {
     let obj = await cache.get(cacheKey)
     if (!obj) {
       obj = { created: Date.now() }
-      const headers = new global.Headers()
+      const headers = new fetch.Headers()
       headers.set('Authorization', `Bearer ${process.env.GRAPHQL_TOKEN}`)
-      headers.set('Content-Type', `text/plain`)
-      headers.set('Accept', `*/*`)
-      obj.data = await fetch("https://api.github.com/markdown/raw", {
+      headers.set('Content-Type', 'text/plain')
+      headers.set('Accept', '*/*')
+      const response = await fetch('https://api.github.com/markdown/raw', {
         method: 'POST',
-	headers: headers,
-        body: repo.readme,
-      }).then(response => response.ok ? response.text() : null);
+        headers: headers,
+        body: repo.readme
+      })
+      obj.data = response.ok ? await response.text() : null
     }
     obj.lastChecked = Date.now()
     await cache.set(cacheKey, obj)
@@ -369,7 +371,7 @@ exports.onPostBuild = async ({ graphql }) => {
           }
         }
         readme
-	readmeHTML
+        readmeHTML
         childGitHubReadme {
           childMarkdownRemark {
             html
