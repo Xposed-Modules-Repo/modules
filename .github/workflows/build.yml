@@ -3,6 +3,10 @@ on:
   push:
    paths-ignore:
     - '.github/workflows/tag.yml'
+  workflow_run:
+    workflows: ["Tag"]
+    types:
+      - completed
   workflow_dispatch:
 
 jobs:
