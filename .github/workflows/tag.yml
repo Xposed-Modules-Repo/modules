@@ -19,7 +19,7 @@ jobs:
     steps:
       - run: |
           wget -O release.apk '${{ github.event.inputs.apk }}'
-          AAPT=$(ls $ANDROID_SDK_ROOT/build-tools/**/aapt2 | head -1)
+          AAPT=$(ls $ANDROID_SDK_ROOT/build-tools/**/aapt2 | tail -1)
           echo $AAPT
-          VERCODE=$($AAPT dump badging release.apk | tail -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
+          VERCODE=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
           echo $VERCODE
