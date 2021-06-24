@@ -14,9 +14,11 @@ on:
         default: 'null'
 
 jobs:
-  say_hello:
+  update_tag:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "Hello ${{ github.event.inputs.repo }}!"
-          echo "- in ${{ github.event.inputs.release }}!"
+          wget -O release.apk '${{ github.event.inputs.apk }}'
+          AAPT=$(ls $ANDROID_SDK_ROOT/build-tools/**/aapt2 | head -1)
+          VERCODE=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
+          echo $VERCODE
