@@ -22,4 +22,4 @@ jobs:
           AAPT=$(ls $ANDROID_SDK_ROOT/build-tools/**/aapt2 | tail -1)
           VERCODE=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
           echo $VERCODE
-          curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GRAPHQL_TOKEN }}" https://api.github.com/repos/Xposed-Modules-Repo/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d '{"tag_name":"${VERCODE}"}'
+          curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GRAPHQL_TOKEN }}" https://api.github.com/repos/Xposed-Modules-Repo/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d "{\"tag_name\":\"${VERCODE}\"}"
