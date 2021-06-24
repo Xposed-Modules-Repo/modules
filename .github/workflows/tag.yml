@@ -1,0 +1,18 @@
+name: Build
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'repo name'
+        required: true
+      release:
+        description: 'release id'
+        required: true
+
+jobs:
+  say_hello:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Hello ${{ github.event.inputs.repo }}!"
+          echo "- in ${{ github.event.inputs.release }}!"
