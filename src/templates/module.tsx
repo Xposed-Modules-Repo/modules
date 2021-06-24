@@ -11,8 +11,7 @@ export default function ModulePage ({ data }: any): ReactElement {
     if (repo.summary) summary = repo.summary
     else if (repo.readmeHTML) {
       summary = repo.readmeHTML
-    }
-    else if (repo.childGitHubReadme) {
+    } else if (repo.childGitHubReadme) {
       summary = repo.childGitHubReadme.childMarkdownRemark.excerpt
     }
     return summary
