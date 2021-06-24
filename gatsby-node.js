@@ -121,12 +121,30 @@ const generateGatsbyNode = (result, createNode) => {
   })
 }
 
-function parseRepositoryObject (repo) {
+async function parseRepositoryObject (repo, cache) {
   if (repo.summary) {
     repo.summary = repo.summary.text.trim()
   }
   if (repo.readme) {
     repo.readme = repo.readme.text
+    const cacheKey = crypto.createHash('md5').update(repo.readme).digest('hex')
+    let obj = await cache.get(cacheKey)
+    if (!obj) {
+      obj = { created: Date.now() }
+      const headers = new global.Headers()
+      headers.set('Authorization', `Bearer ${process.env.GRAPHQL_TOKEN}`)
+      headers.set('Content-Type', `text/plain`)
+      headers.set('Accept', `*/*`)
+      obj.data = await fetch("https://api.github.com/markdown/raw", {
+        method: 'POST',
+	headers: headers,
+        body: repo.readme,
+      }).then(response => response.text());
+    }
+    obj.lastChecked = Date.now()
+    await cache.set(cacheKey, obj)
+
+    repo.readmeHTML = obj.data
   }
   if (repo.sourceUrl) {
     repo.sourceUrl = repo.sourceUrl.text.replace(/[\r\n]/g, '').trim()
@@ -172,13 +190,14 @@ function parseRepositoryObject (repo) {
 exports.onCreateNode = async ({
   node,
   actions,
-  createContentDigest
+  createContentDigest,
+  cache
 }) => {
   const { createNode } = actions
   if (node.internal.type === 'GithubData' && node.data) {
     for (let { node: repo } of node.data.organization.repositories.edges) {
       repo = JSON.parse(JSON.stringify(repo))
-      repo = parseRepositoryObject(repo)
+      repo = await parseRepositoryObject(repo, cache)
       await createNode({
         ...repo,
         id: repo.name,
@@ -350,11 +369,7 @@ exports.onPostBuild = async ({ graphql }) => {
           }
         }
         readme
-        childGitHubReadme {
-          childMarkdownRemark {
-            html
-          }
-        }
+	readmeHTML
         summary
         scope
         sourceUrl
@@ -380,8 +395,6 @@ exports.onPostBuild = async ({ graphql }) => {
     if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = repo.releases.length ? [repo.releases[0]] : []
-    if (repo.childGitHubReadme && repo.childGitHubReadme.childMarkdownRemark && repo.childGitHubReadme.childMarkdownRemark.html)
-      repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
 
