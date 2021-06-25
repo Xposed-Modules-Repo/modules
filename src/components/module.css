@@ -1,0 +1,3 @@
+@import '~github-syntax-light/lib/github-light.css' (prefers-color-scheme: light);
+@import '~github-syntax-dark/lib/github-dark.css' (prefers-color-scheme: dark);
+
