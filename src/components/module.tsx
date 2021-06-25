@@ -3,7 +3,7 @@ import * as React from 'react'
 import { Grid } from '@material-ui/core'
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles'
 import '@primer/css/markdown/index.scss'
-import 'github-syntax-light/lib/github-light.css'
+import './module.styl'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
