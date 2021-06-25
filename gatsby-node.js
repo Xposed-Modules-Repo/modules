@@ -188,6 +188,9 @@ async function fetchRenderedReadme (repo, cache) {
           body: repo.readme
         })
         obj.data = response.ok ? await response.text() : null
+        if (obj.data !== null) {
+          obj.data = obj.data.replace(/src="\/([^"]*)"/g, `src="https://github.com/Xposed-Modules-Repo/${repo.name}/raw/HEAD/$1"`).replace(/href="\/([^"]*)"/g, `href="https://github.com/Xposed-Modules-Repo/${repo.name}/blob/HEAD/$1"`)
+        }
         obj.lastChecked = Date.now()
         await cache.set(cacheKey, obj)
       } catch (e) {
