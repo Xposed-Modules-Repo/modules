@@ -33,6 +33,9 @@ import SearchResultCard from './components/search-result-card'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
+    beforeTheme: {
+      display: 'none'
+    },
     root: {
       flexGrow: 1
     },
@@ -171,10 +174,14 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
     }),
     [prefersDarkMode]
   )
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    setLoaded(true)
+  }, [])
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
-      <div className={classes.root}>
+      <div className={`${classes.root} ${loaded ? '' : classes.beforeTheme}` }>
         <AppBar position='sticky'>
           <Toolbar>
             <IconButton
