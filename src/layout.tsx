@@ -8,7 +8,8 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  MuiThemeProvider, NoSsr,
+  MuiThemeProvider,
+  NoSsr,
   useMediaQuery
 } from '@material-ui/core'
 import { blue } from '@material-ui/core/colors'
@@ -116,7 +117,7 @@ const useStyles = makeStyles((theme: Theme) =>
 
 const index = FlexSearch.create(flexsearchConfig)
 
-export default function Layout (props: { children: React.ReactNode }): React.ReactElement {
+function Layout (props: { children: React.ReactNode }): React.ReactElement {
   const classes = useStyles()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -158,6 +159,83 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
   const toggleDrawer = (): void => {
     setIsDrawerOpen(!isDrawerOpen)
   }
+  return (
+    <div className={classes.root}>
+      <AppBar position='sticky'>
+        <Toolbar>
+          <IconButton
+            className={classes.menuButton}
+            color="inherit"
+            aria-label="open drawer"
+            onClick={toggleDrawer}
+          >
+            <MenuIcon />
+          </IconButton>
+          <div className={classes.title}>
+            <Typography variant="h6" noWrap className={classes.h1}
+                        component={Link} to={'/'}
+            >
+              Xposed Module Repository
+            </Typography>
+          </div>
+          <div
+            className={classes.search}
+            onClick={(e) => { setIsSearchFocused(true); e.stopPropagation() }}
+          >
+            <div className={classes.searchIcon}>
+              <SearchIcon />
+            </div>
+            <InputBase
+              placeholder="Search…"
+              classes={{
+                root: classes.inputRoot,
+                input: classes.inputInput
+              }}
+              inputRef={searchRef}
+              inputProps={{ 'aria-label': 'search' }}
+              value={searchKeyword}
+              onChange={(e) => { setSearchKeyword(e.target.value) }}
+            />
+            <SearchResultCard
+              className={`${classes.searchResult} ${isSearchFocused ? '' : classes.hide}`}
+              searchKeyword={debouncedSearchKeyword}
+              searchResult={searchResult}
+            />
+          </div>
+        </Toolbar>
+      </AppBar>
+      <Drawer open={isDrawerOpen} onClose={toggleDrawer}>
+        <List className={classes.list}>
+          <ListItem button component={Link} to={'/'}>
+            <ListItemIcon><AppsIcon /></ListItemIcon>
+            <ListItemText primary="Browse" />
+          </ListItem>
+          <ListItem button component={Link} to={'/submission'}>
+            <ListItemIcon><PublishIcon /></ListItemIcon>
+            <ListItemText primary="Submission" />
+          </ListItem>
+        </List>
+      </Drawer>
+      <Container maxWidth="md">
+        <>{props.children}</>
+      </Container>
+      <div className={classes.footer}>
+        2021 New Xposed Module Repository
+      </div>
+    </div>
+  )
+}
+
+export const Splash = React.memo(() => (
+  <>
+    <div className="splash" />
+    <script dangerouslySetInnerHTML={{
+      __html: '(function(){var i=-1,t=["__(:з 」∠)__","___(:з 」∠)_","____(:з 」∠)","____(:з」 ∠)","___(:з 」∠)_","___(:з」 ∠)_","__(:з 」∠)__","__(:з」 ∠)__","_(:з 」∠)___"];function f(){var d=document.querySelector(".splash");if(!d)return;i=i+1>=t.length?0:i+1;d.innerText=t[i];setTimeout(f,i>2&&i<8?250:1000)}f()})()'
+    }} />
+  </>
+))
+
+export default function LayoutWithTheme (props: { children: React.ReactNode }): React.ReactElement {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)', {
     noSsr: true
   })
@@ -177,73 +255,14 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
   }, [])
   return (
     <MuiThemeProvider theme={theme}>
+      {!loaded && <Splash />}
       <NoSsr>
         <CssBaseline />
-        <div className={`${classes.root} ${loaded ? '' : 'hide'}` }>
-          <AppBar position='sticky'>
-            <Toolbar>
-              <IconButton
-                className={classes.menuButton}
-                color="inherit"
-                aria-label="open drawer"
-                onClick={toggleDrawer}
-              >
-                <MenuIcon />
-              </IconButton>
-              <div className={classes.title}>
-                <Typography variant="h6" noWrap className={classes.h1}
-                            component={Link} to={'/'}
-                >
-                  Xposed Module Repository
-                </Typography>
-              </div>
-              <div
-                className={classes.search}
-                onClick={(e) => { setIsSearchFocused(true); e.stopPropagation() }}
-              >
-                <div className={classes.searchIcon}>
-                  <SearchIcon />
-                </div>
-                <InputBase
-                  placeholder="Search…"
-                  classes={{
-                    root: classes.inputRoot,
-                    input: classes.inputInput
-                  }}
-                  inputRef={searchRef}
-                  inputProps={{ 'aria-label': 'search' }}
-                  value={searchKeyword}
-                  onChange={(e) => { setSearchKeyword(e.target.value) }}
-                />
-                <SearchResultCard
-                  className={`${classes.searchResult} ${isSearchFocused ? '' : classes.hide}`}
-                  searchKeyword={debouncedSearchKeyword}
-                  searchResult={searchResult}
-                />
-              </div>
-            </Toolbar>
-          </AppBar>
-          <Drawer open={isDrawerOpen} onClose={toggleDrawer}>
-            <List className={classes.list}>
-              <ListItem button component={Link} to={'/'}>
-                <ListItemIcon><AppsIcon /></ListItemIcon>
-                <ListItemText primary="Browse" />
-              </ListItem>
-              <ListItem button component={Link} to={'/submission'}>
-                <ListItemIcon><PublishIcon /></ListItemIcon>
-                <ListItemText primary="Submission" />
-              </ListItem>
-            </List>
-          </Drawer>
-          <Container maxWidth="md">
-            <>{props.children}</>
-          </Container>
-          <div className={classes.footer}>
-            2021 New Xposed Module Repository
-          </div>
-        </div>
+        {loaded && <Layout {...props} />}
       </NoSsr>
-      {!loaded && <div className="splash" />}
+      <div className="ssr">
+        <Layout {...props} />
+      </div>
     </MuiThemeProvider>
   )
 }

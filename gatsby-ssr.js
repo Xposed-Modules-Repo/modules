@@ -9,9 +9,7 @@ const React = require('react')
 
 export const onPreRenderHTML = ({
   getHeadComponents,
-  replaceHeadComponents,
-  getPostBodyComponents,
-  replacePostBodyComponents
+  replaceHeadComponents
 }) => {
   const headComponents = getHeadComponents()
   headComponents.push(
@@ -24,11 +22,4 @@ export const onPreRenderHTML = ({
     <meta name="google-site-verification" content="No7OKPupiyITd5MI15QlaU1_u9raHcajSn8ffTPUGNI" />
   )
   replaceHeadComponents(headComponents)
-  const postBodyComponents = getPostBodyComponents()
-  postBodyComponents.unshift(
-    <script dangerouslySetInnerHTML={{
-      __html: '(function(){var i=-1,t=["__(:з 」∠)__","___(:з 」∠)_","____(:з 」∠)","____(:з」 ∠)","___(:з 」∠)_","___(:з」 ∠)_","__(:з 」∠)__","__(:з」 ∠)__","_(:з 」∠)___"];function f(){var d=document.querySelector(".splash");if(!d)return;i=i+1>=t.length?0:i+1;d.innerText=t[i];setTimeout(f,i>2&&i<8?250:1000)}f()})()'
-    }} />
-  )
-  replacePostBodyComponents(postBodyComponents)
 }
