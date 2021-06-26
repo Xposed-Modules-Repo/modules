@@ -22,7 +22,7 @@ export const onPreRenderHTML = ({
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/RikkaW/webfonts@4/css/NotoSansCJK-TC-VF.css" />
   )
   headComponents.push(
-    <link rel='stylesheet' href='https://fonts.googleapis.com/icon?family=Material+Icons' media="print" onLoad="this.media='all'" />
+    <link rel='stylesheet' href='https://fonts.googleapis.com/icon?family=Material+Icons' />
   )
   headComponents.push(
     <meta name="google-site-verification" content="No7OKPupiyITd5MI15QlaU1_u9raHcajSn8ffTPUGNI" />
