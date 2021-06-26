@@ -1,16 +1,14 @@
-@use "~@primer/primitives/dist/scss/colors_v2/light" as *;
-@use "~@primer/primitives/dist/scss/colors_v2/dark" as *;
-
-@import '~@primer/css/markdown/index.scss';
-
-@import '~github-syntax-light/lib/github-light.css' (prefers-color-scheme: light);
-@import '~github-syntax-dark/lib/github-dark.css' (prefers-color-scheme: dark);
+@use "~@primer/primitives/dist/scss/colors_v2/light" as primer-light;
+@use "~@primer/primitives/dist/scss/colors_v2/dark" as primer-dark;
+@use '~@primer/css/markdown/index';
 
 .markdown-body {
   @media (prefers-color-scheme: light) {
-    @include primer-colors_v2-light;
+    @include primer-light.primer-colors_v2-light;
+    @import '~github-syntax-light/lib/github-light';
   }
   @media (prefers-color-scheme: dark) {
-    @include primer-colors_v2-dark;
+    @include primer-dark.primer-colors_v2-dark;
+    @import '~github-syntax-dark/lib/github-dark';
   }
 }
