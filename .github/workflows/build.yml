@@ -1,7 +1,8 @@
 name: Build
 on:
   push:
-   paths-ignore:
+    branches: [ master ]
+    paths-ignore:
     - '.github/workflows/tag.yml'
   workflow_run:
     workflows: ["Tag"]

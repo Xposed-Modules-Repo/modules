@@ -33,9 +33,6 @@ import SearchResultCard from './components/search-result-card'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
-    beforeTheme: {
-      display: 'none'
-    },
     root: {
       flexGrow: 1
     },
@@ -181,7 +178,7 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
   return (
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
-      <div className={`${classes.root} ${loaded ? '' : classes.beforeTheme}` }>
+      <div className={`${classes.root} ${loaded ? '' : classes.hide}` }>
         <AppBar position='sticky'>
           <Toolbar>
             <IconButton
@@ -243,6 +240,9 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
         <div className={classes.footer}>
           2021 New Xposed Module Repository
         </div>
+      </div>
+      <div className={`splash ${loaded ? classes.hide : ''}`}>
+        <p>Loading...</p>
       </div>
     </MuiThemeProvider>
   )
