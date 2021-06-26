@@ -8,7 +8,6 @@ module.exports = {
     author: 'https://github.com/Xposed-Modules-Repo/modules/graphs/contributors'
   },
   plugins: [
-    'gatsby-plugin-material-ui',
     'gatsby-plugin-postcss',
     'gatsby-plugin-stylus',
     'gatsby-plugin-react-helmet',

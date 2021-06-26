@@ -6,15 +6,24 @@ body {
 @media (prefers-color-scheme: dark) {
   body {
     background-color #303030 !important
-    .slash {
-      color #ffffff
-    }
   }
 }
 
 .splash {
-  height: 100vh
-  display: flex
-  justify-content: center
-  align-items: center
+  position fixed
+  left 0
+  right 0
+  top 0
+  bottom 0
+  z-index -1
+  display flex
+  justify-content center
+  align-items center
+  color #999
+  font-size 30px
+  font-family sans-serif
+}
+
+.hide {
+  display none
 }

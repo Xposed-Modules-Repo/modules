@@ -8,7 +8,7 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  MuiThemeProvider,
+  MuiThemeProvider, NoSsr,
   useMediaQuery
 } from '@material-ui/core'
 import { blue } from '@material-ui/core/colors'
@@ -177,73 +177,73 @@ export default function Layout (props: { children: React.ReactNode }): React.Rea
   }, [])
   return (
     <MuiThemeProvider theme={theme}>
-      <CssBaseline />
-      <div className={`${classes.root} ${loaded ? '' : classes.hide}` }>
-        <AppBar position='sticky'>
-          <Toolbar>
-            <IconButton
-              className={classes.menuButton}
-              color="inherit"
-              aria-label="open drawer"
-              onClick={toggleDrawer}
-            >
-              <MenuIcon />
-            </IconButton>
-            <div className={classes.title}>
-              <Typography variant="h6" noWrap className={classes.h1}
-                          component={Link} to={'/'}
+      <NoSsr>
+        <CssBaseline />
+        <div className={`${classes.root} ${loaded ? '' : 'hide'}` }>
+          <AppBar position='sticky'>
+            <Toolbar>
+              <IconButton
+                className={classes.menuButton}
+                color="inherit"
+                aria-label="open drawer"
+                onClick={toggleDrawer}
               >
-                Xposed Module Repository
-              </Typography>
-            </div>
-            <div
-              className={classes.search}
-              onClick={(e) => { setIsSearchFocused(true); e.stopPropagation() }}
-            >
-              <div className={classes.searchIcon}>
-                <SearchIcon />
+                <MenuIcon />
+              </IconButton>
+              <div className={classes.title}>
+                <Typography variant="h6" noWrap className={classes.h1}
+                            component={Link} to={'/'}
+                >
+                  Xposed Module Repository
+                </Typography>
               </div>
-              <InputBase
-                placeholder="Search…"
-                classes={{
-                  root: classes.inputRoot,
-                  input: classes.inputInput
-                }}
-                inputRef={searchRef}
-                inputProps={{ 'aria-label': 'search' }}
-                value={searchKeyword}
-                onChange={(e) => { setSearchKeyword(e.target.value) }}
-              />
-              <SearchResultCard
-                className={`${classes.searchResult} ${isSearchFocused ? '' : classes.hide}`}
-                searchKeyword={debouncedSearchKeyword}
-                searchResult={searchResult}
-              />
-            </div>
-          </Toolbar>
-        </AppBar>
-        <Drawer open={isDrawerOpen} onClose={toggleDrawer}>
-          <List className={classes.list}>
-            <ListItem button component={Link} to={'/'}>
-              <ListItemIcon><AppsIcon /></ListItemIcon>
-              <ListItemText primary="Browse" />
-            </ListItem>
-            <ListItem button component={Link} to={'/submission'}>
-              <ListItemIcon><PublishIcon /></ListItemIcon>
-              <ListItemText primary="Submission" />
-            </ListItem>
-          </List>
-        </Drawer>
-        <Container maxWidth="md">
-          <>{props.children}</>
-        </Container>
-        <div className={classes.footer}>
-          2021 New Xposed Module Repository
+              <div
+                className={classes.search}
+                onClick={(e) => { setIsSearchFocused(true); e.stopPropagation() }}
+              >
+                <div className={classes.searchIcon}>
+                  <SearchIcon />
+                </div>
+                <InputBase
+                  placeholder="Search…"
+                  classes={{
+                    root: classes.inputRoot,
+                    input: classes.inputInput
+                  }}
+                  inputRef={searchRef}
+                  inputProps={{ 'aria-label': 'search' }}
+                  value={searchKeyword}
+                  onChange={(e) => { setSearchKeyword(e.target.value) }}
+                />
+                <SearchResultCard
+                  className={`${classes.searchResult} ${isSearchFocused ? '' : classes.hide}`}
+                  searchKeyword={debouncedSearchKeyword}
+                  searchResult={searchResult}
+                />
+              </div>
+            </Toolbar>
+          </AppBar>
+          <Drawer open={isDrawerOpen} onClose={toggleDrawer}>
+            <List className={classes.list}>
+              <ListItem button component={Link} to={'/'}>
+                <ListItemIcon><AppsIcon /></ListItemIcon>
+                <ListItemText primary="Browse" />
+              </ListItem>
+              <ListItem button component={Link} to={'/submission'}>
+                <ListItemIcon><PublishIcon /></ListItemIcon>
+                <ListItemText primary="Submission" />
+              </ListItem>
+            </List>
+          </Drawer>
+          <Container maxWidth="md">
+            <>{props.children}</>
+          </Container>
+          <div className={classes.footer}>
+            2021 New Xposed Module Repository
+          </div>
         </div>
-      </div>
-      <div className={`splash ${loaded ? classes.hide : ''}`}>
-        <p>Loading...</p>
-      </div>
+      </NoSsr>
+      {!loaded && <div className="splash" />}
     </MuiThemeProvider>
   )
 }
