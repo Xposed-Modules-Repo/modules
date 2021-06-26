@@ -13,7 +13,13 @@ export const onPreRenderHTML = ({
 }) => {
   const headComponents = getHeadComponents()
   headComponents.push(
-    <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap' media="print" onLoad="this.media='all'" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/RikkaW/webfonts@4/css/Roboto-VF.css" />
+  )
+  headComponents.push(
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/RikkaW/webfonts@4/css/NotoSansCJK-SC-VF.css" />
+  )
+  headComponents.push(
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/RikkaW/webfonts@4/css/NotoSansCJK-TC-VF.css" />
   )
   headComponents.push(
     <link rel='stylesheet' href='https://fonts.googleapis.com/icon?family=Material+Icons' media="print" onLoad="this.media='all'" />

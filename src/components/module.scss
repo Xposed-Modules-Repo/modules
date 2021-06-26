@@ -1,5 +1,5 @@
 @use "~@primer/primitives/dist/scss/colors_v2/light" as primer-light;
-@use "~@primer/primitives/dist/scss/colors_v2/dark" as primer-dark;
+@use "~@primer/primitives/dist/scss/colors_v2/dark_dimmed" as primer-dark;
 @use '~@primer/css/markdown/index';
 
 .markdown-body {
@@ -8,7 +8,8 @@
     @import '~github-syntax-light/lib/github-light';
   }
   @media (prefers-color-scheme: dark) {
-    @include primer-dark.primer-colors_v2-dark;
+    @include primer-dark.primer-colors_v2-dark-dimmed;
     @import '~github-syntax-dark/lib/github-dark';
   }
+  font-family: Roboto, 'Noto Sans SC', sans-serif !important;
 }
