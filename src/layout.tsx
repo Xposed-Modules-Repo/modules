@@ -245,6 +245,13 @@ export default function LayoutWithTheme (props: { children: React.ReactNode }): 
         type: prefersDarkMode ? 'dark' : 'light',
         primary: { main: prefersDarkMode ? '#333' : blue[600] },
         secondary: { main: blue[500] }
+      },
+      typography: {
+        fontFamily: [
+          'Roboto',
+          'FZ SC',
+          'sans-serif'
+        ].join(',')
       }
     }),
     [prefersDarkMode]
