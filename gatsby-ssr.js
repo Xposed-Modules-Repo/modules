@@ -13,13 +13,10 @@ export const onPreRenderHTML = ({
 }) => {
   const headComponents = getHeadComponents()
   headComponents.push(
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/RikkaW/webfonts@4/css/Roboto-VF.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Xposed-Modules-Repo/modules@webfont/Roboto-VF.css" />
   )
   headComponents.push(
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/RikkaW/webfonts@4/css/NotoSansCJK-SC-VF.css" />
-  )
-  headComponents.push(
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/RikkaW/webfonts@4/css/NotoSansCJK-TC-VF.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Xposed-Modules-Repo/modules@webfont/FZ-SC-VF.css" />
   )
   headComponents.push(
     <link rel='stylesheet' href='https://fonts.googleapis.com/icon?family=Material+Icons' />
