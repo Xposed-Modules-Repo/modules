@@ -8,7 +8,7 @@ const fetch = require('node-fetch')
 
 const { fetchFromGithub } = require('./github-source')
 
-const PAGINATION = 100
+const PAGINATION = 10
 function makeRepositoriesQuery (cursor) {
   const arg = cursor ? `, after: "${cursor}"` : ''
   return `
