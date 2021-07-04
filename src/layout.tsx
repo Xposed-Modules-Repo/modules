@@ -9,7 +9,6 @@ import {
   ListItemIcon,
   ListItemText,
   MuiThemeProvider,
-  NoSsr,
   useMediaQuery
 } from '@material-ui/core'
 import { blue } from '@material-ui/core/colors'
@@ -115,6 +114,7 @@ const useStyles = makeStyles((theme: Theme) =>
   })
 )
 
+let previousLoaded = false
 const index = FlexSearch.create(flexsearchConfig)
 
 function Layout (props: { children: React.ReactNode }): React.ReactElement {
@@ -260,14 +260,12 @@ export default function LayoutWithTheme (props: { children: React.ReactNode }): 
   useEffect(() => {
     setLoaded(true)
   }, [])
+  previousLoaded = previousLoaded || loaded
   return (
     <MuiThemeProvider theme={theme}>
-      {!loaded && <Splash />}
-      <NoSsr>
-        <CssBaseline />
-        {loaded && <Layout {...props} />}
-      </NoSsr>
-      <div className="ssr">
+      {!previousLoaded && <Splash />}
+      <CssBaseline />
+      <div className={`fade ${previousLoaded ? '' : 'ssr'}`}>
         <Layout {...props} />
       </div>
     </MuiThemeProvider>

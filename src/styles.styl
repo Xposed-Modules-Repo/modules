@@ -25,8 +25,8 @@ body {
 }
 
 .ssr {
-  position: absolute !important;
-  height: 1px; width: 1px;
-  overflow: hidden;
-  clip: rect(1px, 1px, 1px, 1px);
+  opacity: 0;
+}
+.fade {
+  transition: opacity 200ms;
 }
