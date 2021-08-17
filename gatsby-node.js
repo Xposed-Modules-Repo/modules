@@ -168,16 +168,17 @@ function parseRepositoryObject (repo) {
     }
   }
   repo.hide = !!repo.hide
-  repo.isModule = repo.name.match(/\./) &&
+  repo.isModule = !!(repo.name.match(/\./) &&
     repo.description &&
     repo.releases &&
     repo.releases.edges.length &&
-    repo.name !== 'org.meowcat.example'
+    repo.name !== 'org.meowcat.example')
+  console.log(`Got repo: ${repo.name}, is module: ${repo.isModule}`)
   return repo
 }
 
 async function fetchRenderedReadme (repo, cache) {
-  if (repo.readme) {
+  if (repo.readme && repo.isModule) {
     const cacheKey = crypto.createHash('md5').update(repo.readme).digest('hex')
     let obj = await cache.get(cacheKey)
     if (!obj) {
