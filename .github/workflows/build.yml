@@ -51,7 +51,7 @@ jobs:
           GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
           GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES: true
       - name: clean up caches on failure
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         run: |
           rm -rf public/*
           rm -rf .cache/*
