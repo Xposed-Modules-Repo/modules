@@ -436,14 +436,14 @@ exports.onPostBuild = async ({ graphql }) => {
   const publicPath = path.join(__dirname, 'public')
   const hash = md5(Math.random().toString(36).substring(7))
   const jsonFiles = glob.sync(`${publicPath}/page-data/**/page-data.json`)
-  console.log('[onPostBuild] Renaming the following files:')
+  console.log(`[onPostBuild] Renaming the following files to page-data.${hash}.json:`)
   for (const file of jsonFiles) {
     console.log(file)
     const newFilename = file.replace('page-data.json', `page-data.${hash}.json`)
     // Renaming makes cache fails, so copy instead
-    await fs.copyFileSync(file, newFilename)
+    fs.copyFileSync(file, newFilename)
   }
-  const appShaFiles = glob.sync(`${publicPath}/**/app-*.js`)
+  const appShaFiles = glob.sync(`${publicPath}/**/app-+([^-]).js`)
   const [appShaFile] = appShaFiles
   const [appShaFilename] = appShaFile.split('/').slice(-1)
   const appShaFilenameReg = new RegExp(appShaFilename, 'g')
@@ -451,8 +451,13 @@ exports.onPostBuild = async ({ graphql }) => {
   const newFilePath = appShaFile.replace(appShaFilename, newAppShaFilename)
   console.log(`[onPostBuild] Copying: ${appShaFilename} to ${newAppShaFilename}`)
   // Renaming makes cache fails, so copy instead
-  await fs.copyFileSync(appShaFile, newFilePath)
-  await fs.copyFileSync(`${appShaFile}.map`, `${newFilePath}.map`)
+  fs.copyFileSync(appShaFile, newFilePath)
+  if (fs.existsSync(`${appShaFile}.map`)) {
+    fs.copyFileSync(`${appShaFile}.map`, `${newFilePath}.map`)
+  }
+  if (fs.existsSync(`${appShaFile}.LICENSE.txt`)) {
+    fs.copyFileSync(`${appShaFile}.LICENSE.txt`, `${newFilePath}.LICENSE.txt`)
+  }
   const htmlJSAndJSONFiles = [
     `${newFilePath}.map`,
     ...glob.sync(`${publicPath}/**/*.{html,js,json}`)
@@ -461,17 +466,17 @@ exports.onPostBuild = async ({ graphql }) => {
     `[onPostBuild] Replacing page-data.json, ${appShaFilename}, and ${appShaFilename}.map references in the following files:`
   )
   for (const file of htmlJSAndJSONFiles) {
-    const stats = await fs.statSync(file, 'utf8')
+    const stats = fs.statSync(file, 'utf8')
     if (!stats.isFile()) {
       continue
     }
-    const content = await fs.readFileSync(file, 'utf8')
+    const content = fs.readFileSync(file, 'utf8')
     const result = content
       .replace(appShaFilenameReg, newAppShaFilename)
       .replace(/page-data.json/g, `page-data.${hash}.json`)
     if (result !== content) {
       console.log(file)
-      await fs.writeFileSync(file, result, 'utf8')
+      fs.writeFileSync(file, result, 'utf8')
     }
   }
 }
