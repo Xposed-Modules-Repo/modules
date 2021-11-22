@@ -19,7 +19,7 @@ export interface RepoCardProps {
 const useStyles = makeStyles({
   root: {
     margin: 10,
-    height: 220,
+    height: 200,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-end',
