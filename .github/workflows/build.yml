@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 1
       - name: Yarn cache directory
         id: yarn-cache-dir
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+        run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
       - name: cache yarn modules
         uses: actions/cache@v2
         with:
@@ -38,7 +38,7 @@ jobs:
           restore-keys: ${{ runner.os }}-gatsby-cache-
       - name: Install and Build 🔧 # This example project is built using yarn and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
         run: |
-          yarn install --pure-lockfile --prefer-offline
+          yarn install --immutable
           yarn build
           echo "modules.lsposed.org" > ./public/CNAME
         env:
