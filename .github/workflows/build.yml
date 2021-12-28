@@ -9,7 +9,7 @@ on:
     types:
       - completed
   workflow_dispatch:
-concurrency: 
+concurrency:
   group: ${{ github.sha }}
   cancel-in-progress: true
 
@@ -21,6 +21,9 @@ jobs:
       - uses: actions/checkout@master
         with:
           fetch-depth: 1
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16'
       - name: Yarn cache directory
         id: yarn-cache-dir
         run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
@@ -42,6 +45,14 @@ jobs:
           path: public
           key: ${{ runner.os }}-gatsby-public-${{ github.run_id }}
           restore-keys: ${{ runner.os }}-gatsby-public-
+      - name: cache gatsby public-cache
+        uses: pat-s/always-upload-cache@v2.1.5
+        with:
+          path: public-cache
+          key: ${{ runner.os }}-gatsby-public-cache-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-gatsby-public-cache-
+      - name: Restore cache
+        run: node gh-pages-cache-restore.js
       - name: Install and Build 🔧 # This example project is built using yarn and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
         run: |
           yarn install --immutable
@@ -54,7 +65,10 @@ jobs:
         if: ${{ failure() || cancelled() }}
         run: |
           rm -rf public/*
+          rm -rf public-cache/*
           rm -rf .cache/*
+      - name: Refresh cache
+        run: node gh-pages-cache.js
       - uses: JamesIves/github-pages-deploy-action@4.0.0
         with:
           branch: gh-pages # The branch the action should deploy to.
