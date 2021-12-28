@@ -36,6 +36,12 @@ jobs:
           path: .cache
           key: ${{ runner.os }}-gatsby-cache-${{ github.run_id }}
           restore-keys: ${{ runner.os }}-gatsby-cache-
+      - name: cache gatsby public
+        uses: pat-s/always-upload-cache@v2.1.5
+        with:
+          path: public
+          key: ${{ runner.os }}-gatsby-public-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-gatsby-public-
       - name: Install and Build 🔧 # This example project is built using yarn and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
         run: |
           yarn install --immutable
