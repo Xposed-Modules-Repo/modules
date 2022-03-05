@@ -74,7 +74,7 @@ export default function Module ({ data }: any): ReactElement {
               ? (<div
                 className="markdown-body"
                 dangerouslySetInnerHTML={{
-                  __html: data.githubRepository.readmeHTML || data.githubRepository.childGitHubReadme.childMarkdownRemark.html
+                  __html: data.githubRepository.readmeHTML || data.githubRepository.childGitHubReadme ? data.githubRepository.childGitHubReadme.childMarkdownRemark.html : ''
                 }}
               />)
               : (<div className={classes.plainDocument}>

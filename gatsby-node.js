@@ -425,7 +425,7 @@ exports.onPostBuild = async ({ graphql }) => {
     if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = repo.releases.length ? [repo.releases[0]] : []
-    if (!repo.readmeHTML) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
+    if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
 }
