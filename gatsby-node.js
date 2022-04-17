@@ -165,6 +165,14 @@ function parseRepositoryObject (repo) {
       repo.scope = null
     }
   }
+  if (repo.releases) {
+    repo.releases.edges = repo.releases.edges.filter(function (release) {
+      release.node.releaseAssets.edges = release.node.releaseAssets.edges.filter(function (assets) {
+        return assets.node.contentType == 'application/vnd.android.package-archive'
+      })
+      return release.node.releaseAssets.edges.length > 0
+    })
+  }
   repo.hide = !!repo.hide
   repo.isModule = !!(repo.name.match(/\./) &&
     repo.description &&
