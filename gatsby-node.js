@@ -169,9 +169,8 @@ function parseRepositoryObject (repo) {
   repo.hide = !!repo.hide
   if (repo.releases) {
     repo.releases.edges = repo.releases.edges
-    .filter(({ node: { isDraft } }) => !isDraft)
-    .filter(({ node: { releaseAssets } }) =>
-      releaseAssets && releaseAssets.edges
+    .filter(({ node: { releaseAssets, isDraft } }) =>
+      !isDraft && releaseAssets && releaseAssets.edges
       .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
   }
   repo.isModule = !!(repo.name.match(/\./) &&
