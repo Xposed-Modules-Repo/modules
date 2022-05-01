@@ -65,6 +65,7 @@ function makeRepositoriesQuery (cursor) {
               node {
                 name
                 url
+                isDraft
                 description
                 descriptionHTML
                 createdAt
@@ -167,9 +168,11 @@ function parseRepositoryObject (repo) {
   }
   repo.hide = !!repo.hide
   if (repo.releases) {
-    repo.releases.edges = repo.releases.edges.filter(({ node: { releaseAssets } }) =>
-      releaseAssets &&
-      releaseAssets.edges.some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
+    repo.releases.edges = repo.releases.edges
+    .filter(({ node: { isDraft } }) => !isDraft)
+    .filter(({ node: { releaseAssets } }) =>
+      releaseAssets && releaseAssets.edges
+      .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
   }
   repo.isModule = !!(repo.name.match(/\./) &&
     repo.description &&
@@ -379,6 +382,7 @@ exports.onPostBuild = async ({ graphql }) => {
             node {
               name
               url
+              isDraft
               description
               descriptionHTML
               createdAt
