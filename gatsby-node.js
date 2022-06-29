@@ -59,6 +59,7 @@ function makeRepositoriesQuery (cursor) {
           }
           latestRelease {
             tagName
+            publishedAt
           }
           releases(orderBy: {field: CREATED_AT, direction: DESC}, first: 20) {
             edges {
@@ -135,6 +136,7 @@ function parseRepositoryObject (repo) {
     repo.sourceUrl = repo.sourceUrl.text.replace(/[\r\n]/g, '').trim()
   }
   if (repo.latestRelease) {
+    repo.latestReleaseTime = repo.latestRelease.publishedAt
     repo.latestRelease = repo.latestRelease.tagName
   }
   if (repo.additionalAuthors) {
@@ -376,6 +378,7 @@ exports.onPostBuild = async ({ graphql }) => {
           }
         }
         latestRelease
+        latestReleaseTime
         releases {
           edges {
             node {
