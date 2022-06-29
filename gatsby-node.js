@@ -60,7 +60,7 @@ function makeRepositoriesQuery (cursor) {
           latestRelease {
             tagName
           }
-          releases(orderBy: {field: PUBLISHED_AT, direction: DESC}, first: 20) {
+          releases(orderBy: {field: CREATED_AT, direction: DESC}, first: 20) {
             edges {
               node {
                 name
