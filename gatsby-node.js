@@ -58,8 +58,25 @@ function makeRepositoriesQuery (cursor) {
             }
           }
           latestRelease {
-            tagName
+            name
+            url
+            isDraft
+            description
+            descriptionHTML
+            createdAt
             publishedAt
+            updatedAt
+            tagName
+            isPrerelease
+            releaseAssets(first: 50) {
+              edges {
+                node {
+                  name
+                  contentType
+                  downloadUrl
+                }
+              }
+            }
           }
           releases(orderBy: {field: CREATED_AT, direction: DESC}, first: 20) {
             edges {
@@ -137,7 +154,6 @@ function parseRepositoryObject (repo) {
   }
   if (repo.latestRelease) {
     repo.latestReleaseTime = repo.latestRelease.publishedAt
-    repo.latestRelease = repo.latestRelease.tagName
   }
   if (repo.additionalAuthors) {
     try {
@@ -174,6 +190,7 @@ function parseRepositoryObject (repo) {
     .filter(({ node: { releaseAssets, isDraft } }) =>
       !isDraft && releaseAssets && releaseAssets.edges
       .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
+    .sort((a, b) => new Date(a.publishAt).getUTCMilliseconds() - new Date(b.publishAt).getUTCMilliseconds())
   }
   repo.isModule = !!(repo.name.match(/\./) &&
     repo.description &&
@@ -435,7 +452,8 @@ exports.onPostBuild = async ({ graphql }) => {
     const modulePath = path.join(rootPath, 'module')
     if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
-    repo.releases = repo.releases.length ? [repo.releases[0]] : []
+    repo.releases = repo.latestRelease ? [repo.latestRelease] : []
+    repo.latestRelease = repo.latestRelease ? repo.latestRelease.tagName : undefined
     if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
