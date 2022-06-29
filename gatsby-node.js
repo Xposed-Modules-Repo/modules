@@ -471,9 +471,10 @@ exports.onPostBuild = async ({ graphql }) => {
   for (const repo of modules) {
     const modulePath = path.join(rootPath, 'module')
     if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
+    const latestRelease = repo.latestRelease
+    repo.latestRelease = latestRelease ? latestRelease.tagName : undefined
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
-    repo.releases = repo.latestRelease ? [repo.latestRelease] : []
-    repo.latestRelease = repo.latestRelease ? repo.latestRelease.tagName : undefined
+    repo.releases = latestRelease ? [latestRelease] : []
     if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
