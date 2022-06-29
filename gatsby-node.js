@@ -394,7 +394,27 @@ exports.onPostBuild = async ({ graphql }) => {
             }
           }
         }
-        latestRelease
+        latestRelease {
+          name
+          url
+          isDraft
+          description
+          descriptionHTML
+          createdAt
+          publishedAt
+          updatedAt
+          tagName
+          isPrerelease
+          releaseAssets {
+            edges {
+              node {
+                name
+                contentType
+                downloadUrl
+              }
+            }
+          }
+        }
         latestReleaseTime
         releases {
           edges {
