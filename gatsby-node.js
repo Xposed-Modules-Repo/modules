@@ -190,7 +190,7 @@ function parseRepositoryObject (repo) {
     .filter(({ node: { releaseAssets, isDraft } }) =>
       !isDraft && releaseAssets && releaseAssets.edges
       .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
-    .sort((a, b) => new Date(a.publishAt).getUTCMilliseconds() - new Date(b.publishAt).getUTCMilliseconds())
+    .sort((a, b) => new Date(a.publishedAt).getUTCMilliseconds() - new Date(b.publishedAt).getUTCMilliseconds())
   }
   repo.isModule = !!(repo.name.match(/\./) &&
     repo.description &&
