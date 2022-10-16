@@ -25,6 +25,8 @@ jobs:
           echo $VERCODE-$VERNAME
           mkdir test
           cd test
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
           git init .
           git commit -m "$VERCODE-$VERNAME" --allow-empty
           git tag "$VERCODE-$VERNAME" -m "$VERCODE-$VERNAME" -f
