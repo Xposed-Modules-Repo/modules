@@ -23,4 +23,11 @@ jobs:
           VERCODE=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
           VERNAME=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionName='\([^']*\)'.*/\1/p")
           echo $VERCODE-$VERNAME
+          mkdir test
+          cd test
+          git init .
+          git commit -m "$VERCODE-$VERNAME" --allow-empty
+          git tag "$VERCODE-$VERNAME" -m "$VERCODE-$VERNAME" -f
+          git remote add remote origin "https://${{ secrets.GRAPHQL_TOKEN }}@github.com/Xposed-Modules-Repo/${{ github.event.inputs.repo }}.git"
+          git push "$VERCODE-$VERNAME" -f
           curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GRAPHQL_TOKEN }}" https://api.github.com/repos/Xposed-Modules-Repo/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d "{\"tag_name\":\"${VERCODE}-${VERNAME}\"}"
