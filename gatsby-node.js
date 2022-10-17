@@ -173,8 +173,10 @@ function parseRepositoryObject (repo) {
     repo.releases &&
     repo.releases.edges.length &&
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
-  repo.latestRelease = repo.releases.edges[0]
-  repo.latestReleaseTime = repo.latestRelease.publishedAt
+  if (repo.isModule) {
+    repo.latestRelease = repo.releases.edges[0]
+    repo.latestReleaseTime = repo.latestRelease.publishedAt
+  }
   console.log(`Got repo: ${repo.name}, is module: ${repo.isModule}`)
   return repo
 }
