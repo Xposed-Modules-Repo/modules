@@ -57,6 +57,27 @@ function makeRepositoriesQuery (cursor) {
               text
             }
           }
+          latestRelease {
+            name
+            url
+            isDraft
+            description
+            descriptionHTML
+            createdAt
+            publishedAt
+            updatedAt
+            tagName
+            isPrerelease
+            releaseAssets(first: 50) {
+              edges {
+                node {
+                  name
+                  contentType
+                  downloadUrl
+                }
+              }
+            }
+          }
           releases(orderBy: {field: CREATED_AT, direction: DESC}, first: 20) {
             edges {
               node {
@@ -131,6 +152,14 @@ function parseRepositoryObject (repo) {
   if (repo.sourceUrl) {
     repo.sourceUrl = repo.sourceUrl.text.replace(/[\r\n]/g, '').trim()
   }
+  if (repo.latestRelease) {
+    if (!(!repo.latestRelease.isDraft && repo.latestRelease.releaseAssets &&
+      repo.latestRelease.tagName.match(/^\d+-.+$/) && repo.latestRelease.releaseAssets.edges
+      .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))) {
+        repo.latestRelease = repo.releases.edges[0].node
+    }
+    repo.latestReleaseTime = repo.latestRelease.publishedAt
+  }
   if (repo.additionalAuthors) {
     try {
       const additionalAuthors = JSON.parse(repo.additionalAuthors.text)
@@ -173,10 +202,6 @@ function parseRepositoryObject (repo) {
     repo.releases &&
     repo.releases.edges.length &&
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
-  if (repo.isModule) {
-    repo.latestRelease = repo.releases.edges[0].node
-    repo.latestReleaseTime = repo.latestRelease.publishedAt
-  }
   console.log(`Got repo: ${repo.name}, is module: ${repo.isModule}`)
   return repo
 }
