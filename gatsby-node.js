@@ -57,6 +57,27 @@ function makeRepositoriesQuery (cursor) {
               text
             }
           }
+          latestRelease {
+            name
+            url
+            isDraft
+            description
+            descriptionHTML
+            createdAt
+            publishedAt
+            updatedAt
+            tagName
+            isPrerelease
+            releaseAssets(first: 50) {
+              edges {
+                node {
+                  name
+                  contentType
+                  downloadUrl
+                }
+              }
+            }
+          }
           releases(first: 20) {
             edges {
               node {
@@ -162,6 +183,9 @@ function parseRepositoryObject (repo) {
   }
   repo.hide = !!repo.hide
   if (repo.releases) {
+    if (repo.latestRelease) {
+        repo.releases.edges = [repo.latestRelease, ...repo.releases.edges]
+    }
     repo.releases.edges = repo.releases.edges
     .filter(({ node: { releaseAssets, isDraft, tagName } }) =>
       !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
@@ -174,7 +198,7 @@ function parseRepositoryObject (repo) {
     repo.releases.edges.length &&
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
   if (repo.isModule) {
-    repo.latestRelease = repo.releases.edges[0].node
+    repo.latestRelease = repo.releases.edges.find(({node: { isPrelease }}) => !isPrelease).node
     repo.latestReleaseTime = repo.latestRelease.publishedAt
   }
   console.log(`Got repo: ${repo.name}, is module: ${repo.isModule}`)
