@@ -188,7 +188,7 @@ function parseRepositoryObject (repo) {
         repo.releases.edges = [{ node: repo.latestRelease }, ...repo.releases.edges]
     }
     repo.releases.edges = repo.releases.edges
-    .filter(({ node: { releaseAssets, isDraft, tagName } }) =>
+    .filter(({ node: { releaseAssets, isDraft, isLatest, tagName } }) =>
       !isLatest && !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
       .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
     .sort((a, b) => new Date(a.publishedAt).getUTCMilliseconds() - new Date(b.publishedAt).getUTCMilliseconds())
