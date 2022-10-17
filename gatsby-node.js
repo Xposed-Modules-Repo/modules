@@ -191,7 +191,6 @@ function parseRepositoryObject (repo) {
     .filter(({ node: { releaseAssets, isDraft, isLatest, tagName } }) =>
       !isLatest && !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
       .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
-    .sort((a, b) => new Date(a.publishedAt).getUTCMilliseconds() - new Date(b.publishedAt).getUTCMilliseconds())
   }
   repo.isModule = !!(repo.name.match(/\./) &&
     repo.description &&
@@ -200,7 +199,17 @@ function parseRepositoryObject (repo) {
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
   if (repo.isModule) {
     repo.latestRelease = repo.releases.edges.find(({node: { isPrelease }}) => !isPrelease).node
-    repo.latestReleaseTime = repo.latestRelease.publishedAt
+    if (latestRelease) {
+        repo.latestReleaseTime = repo.latestRelease.publishedAt
+    }
+    repo.latestBetaRelease = repo.releases.edges.find(({node: { isPrelease, name }}) => isPrelease && !name.match(/-snapshot$/)).node || repo.latestRelease
+    if (repo.latestBetaRelease) {
+        repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt
+    }
+    repo.latestSnapshotRelease = repo.releases.edges.find(({node: { isPrelease, name }}) => isPrelease && name.match(/-snapshot$/)).node || repo.latestBetaRelease
+    if (repo.latestSnapshotRelease) {
+        repo.latestSnapshotReleaseTime = repo.latestSnapshotRelease.publishedAt
+    }
   }
   console.log(`Got repo: ${repo.name}, is module: ${repo.isModule}`)
   return repo
