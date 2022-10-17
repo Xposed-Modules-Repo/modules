@@ -91,6 +91,7 @@ function makeRepositoriesQuery (cursor) {
                 updatedAt
                 tagName
                 isPrerelease
+                isLatest
                 releaseAssets(first: 50) {
                   edges {
                     node {
@@ -184,11 +185,11 @@ function parseRepositoryObject (repo) {
   repo.hide = !!repo.hide
   if (repo.releases) {
     if (repo.latestRelease) {
-        repo.releases.edges = [repo.latestRelease, ...repo.releases.edges]
+        repo.releases.edges = [{ node: repo.latestRelease }, ...repo.releases.edges]
     }
     repo.releases.edges = repo.releases.edges
     .filter(({ node: { releaseAssets, isDraft, tagName } }) =>
-      !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
+      !isLatest && !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
       .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
     .sort((a, b) => new Date(a.publishedAt).getUTCMilliseconds() - new Date(b.publishedAt).getUTCMilliseconds())
   }
