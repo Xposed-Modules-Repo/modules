@@ -196,7 +196,7 @@ function parseRepositoryObject (repo) {
     repo.description &&
     repo.releases &&
     repo.releases.edges.length &&
-    repo.name !== 'org.meowcat.example')
+    repo.name !== 'org.meowcat.example' && repo.name !== '.github')
   console.log(`Got repo: ${repo.name}, is module: ${repo.isModule}`)
   return repo
 }
