@@ -435,7 +435,51 @@ exports.onPostBuild = async ({ graphql }) => {
             }
           }
         }
+        latestBetaRelease {
+          name
+          url
+          isDraft
+          description
+          descriptionHTML
+          createdAt
+          publishedAt
+          updatedAt
+          tagName
+          isPrerelease
+          releaseAssets {
+            edges {
+              node {
+                name
+                contentType
+                downloadUrl
+              }
+            }
+          }
+        }
+        latestSnapshotRelease {
+          name
+          url
+          isDraft
+          description
+          descriptionHTML
+          createdAt
+          publishedAt
+          updatedAt
+          tagName
+          isPrerelease
+          releaseAssets {
+            edges {
+              node {
+                name
+                contentType
+                downloadUrl
+              }
+            }
+          }
+        }
         latestReleaseTime
+        latestBetaReleaseTime
+        latestSnapshotReleaseTime
         releases {
           edges {
             node {
@@ -492,9 +536,15 @@ exports.onPostBuild = async ({ graphql }) => {
     const modulePath = path.join(rootPath, 'module')
     if (!fs.existsSync(modulePath)) fs.mkdirSync(modulePath, { recursive: true })
     const latestRelease = repo.latestRelease
+    const latestBetaRelease = repo.latestBetaRelease
+    const latestSnapshotRelease = repo.latestSnapshotRelease
     repo.latestRelease = latestRelease ? latestRelease.tagName : undefined
+    repo.latestBetaRelease = latestBetaRelease ? latestBetaRelease.tagName : undefined
+    repo.latestSnapshotRelease = latestSnapshotRelease ? latestSnapshotRelease.tagName : undefined
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = latestRelease ? [latestRelease] : []
+    repo.betaReleases = latestBetaRelease ? [latestBetaRelease] : []
+    repo.snapshotReleases = latestSnapshotRelease ? [latestSnapshotRelease] : []
     if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
