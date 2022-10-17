@@ -210,7 +210,7 @@ function parseRepositoryObject (repo) {
         repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt
         repo.latestBetaRelease.isLatestBeta = true
     }
-    repo.latestSnapshotRelease = repo.releases.edges.find(({node: { isPrelease, name }}) => isPrelease && name.match(/-snapshot$/)) || repo.latestBetaRelease
+    repo.latestSnapshotRelease = repo.releases.edges.find(({node: { isPrelease, name }}) => isPrelease && name.match(/-snapshot$/)) || {node: repo.latestBetaRelease}
     if (repo.latestSnapshotRelease) {
         repo.latestSnapshotRelease = repo.latestSnapshotRelease.node
         repo.latestSnapshotReleaseTime = repo.latestSnapshotRelease.publishedAt
