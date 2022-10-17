@@ -57,7 +57,7 @@ function makeRepositoriesQuery (cursor) {
               text
             }
           }
-          releases(orderBy: {field: CREATED_AT, direction: DESC}, first: 20) {
+          releases(first: 20) {
             edges {
               node {
                 name
