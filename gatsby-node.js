@@ -187,8 +187,8 @@ function parseRepositoryObject (repo) {
   repo.hide = !!repo.hide
   if (repo.releases) {
     repo.releases.edges = repo.releases.edges
-    .filter(({ node: { releaseAssets, isDraft } }) =>
-      !isDraft && releaseAssets && releaseAssets.edges
+    .filter(({ node: { releaseAssets, isDraft, tagName } }) =>
+      !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
       .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
     .sort((a, b) => new Date(a.publishedAt).getUTCMilliseconds() - new Date(b.publishedAt).getUTCMilliseconds())
   }
