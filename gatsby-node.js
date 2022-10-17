@@ -198,19 +198,19 @@ function parseRepositoryObject (repo) {
     repo.releases.edges.length &&
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
   if (repo.isModule) {
-    repo.latestRelease = repo.releases.edges.find(({node: { isPrelease }}) => !isPrelease)
+    repo.latestRelease = repo.releases.edges.find(({node: { isPrerelease }}) => !isPrerelease)
     if (repo.latestRelease) {
         repo.latestRelease = repo.latestRelease.node
         repo.latestReleaseTime = repo.latestRelease.publishedAt
         repo.latestRelease.isLatest = true
     }
-    repo.latestBetaRelease = repo.releases.edges.find(({node: { isPrelease, name }}) => isPrelease && !name.match(/-snapshot$/)) || {node: repo.latestRelease}
+    repo.latestBetaRelease = repo.releases.edges.find(({node: { isPrerelease, name }}) => isPrerelease && !name.match(/-snapshot$/)) || {node: repo.latestRelease}
     if (repo.latestBetaRelease) {
         repo.latestBetaRelease = repo.latestBetaRelease.node
         repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt
         repo.latestBetaRelease.isLatestBeta = true
     }
-    repo.latestSnapshotRelease = repo.releases.edges.find(({node: { isPrelease, name }}) => isPrelease && name.match(/-snapshot$/)) || {node: repo.latestBetaRelease}
+    repo.latestSnapshotRelease = repo.releases.edges.find(({node: { isPrerelease, name }}) => isPrerelease && name.match(/-snapshot$/)) || {node: repo.latestBetaRelease}
     if (repo.latestSnapshotRelease) {
         repo.latestSnapshotRelease = repo.latestSnapshotRelease.node
         repo.latestSnapshotReleaseTime = repo.latestSnapshotRelease.publishedAt
