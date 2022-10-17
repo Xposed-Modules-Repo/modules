@@ -540,7 +540,7 @@ exports.onPostBuild = async ({ graphql }) => {
     const latestSnapshotRelease = repo.latestSnapshotRelease
     repo.latestRelease = latestRelease ? latestRelease.tagName : undefined
     repo.latestBetaRelease = latestBetaRelease  && repo.latestRelease !== latestBetaRelease.tagName ? latestBetaRelease.tagName : undefined
-    repo.latestSnapshotRelease = latestSnapshotRelease && repo.latestBetaRelease !== latestSnapshotRelease.tagName ? latestSnapshotRelease.tagName : undefined
+    repo.latestSnapshotRelease = latestSnapshotRelease && repo.latestBetaRelease !== latestSnapshotRelease.tagName && repo.latestRelease !== latestSnapshotRelease.tagName ? latestSnapshotRelease.tagName : undefined
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = latestRelease ? [latestRelease] : []
     if (repo.latestBetaRelease) {
