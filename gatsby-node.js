@@ -543,8 +543,8 @@ exports.onPostBuild = async ({ graphql }) => {
     repo.latestSnapshotRelease = latestSnapshotRelease ? latestSnapshotRelease.tagName : undefined
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = latestRelease ? [latestRelease] : []
-    repo.betaReleases = latestBetaRelease ? [latestBetaRelease] : []
-    repo.snapshotReleases = latestSnapshotRelease ? [latestSnapshotRelease] : []
+    repo.betaReleases = latestBetaRelease && repo.latestBetaRelease !== repo.latestRelease ? [latestBetaRelease] : []
+    repo.snapshotReleases = latestSnapshotRelease && repo.latestSnapshotRelease !== repo.latestBetaRelease ? [latestSnapshotRelease] : []
     if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
