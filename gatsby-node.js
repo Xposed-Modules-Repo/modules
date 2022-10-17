@@ -539,12 +539,16 @@ exports.onPostBuild = async ({ graphql }) => {
     const latestBetaRelease = repo.latestBetaRelease
     const latestSnapshotRelease = repo.latestSnapshotRelease
     repo.latestRelease = latestRelease ? latestRelease.tagName : undefined
-    repo.latestBetaRelease = latestBetaRelease ? latestBetaRelease.tagName : undefined
-    repo.latestSnapshotRelease = latestSnapshotRelease ? latestSnapshotRelease.tagName : undefined
+    repo.latestBetaRelease = latestBetaRelease  && repo.latestRelease !== latestBetaRelease.tagName ? latestBetaRelease.tagName : undefined
+    repo.latestSnapshotRelease = latestSnapshotRelease && repo.latestBetaRelease !== latestSnapshotRelease.tagName ? latestSnapshotRelease.tagName : undefined
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = latestRelease ? [latestRelease] : []
-    repo.betaReleases = latestBetaRelease && repo.latestBetaRelease !== repo.latestRelease ? [latestBetaRelease] : []
-    repo.snapshotReleases = latestSnapshotRelease && repo.latestSnapshotRelease !== repo.latestBetaRelease ? [latestSnapshotRelease] : []
+    if (repo.latestBetaRelease) {
+        repo.betaReleases = [latestBetaRelease]
+    }
+    if (repo.latestSnapshotRelease) {
+        repo.snapshotReleases = [latestSnapshotRelease]
+    }
     if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
