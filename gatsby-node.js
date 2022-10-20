@@ -1,8 +1,7 @@
 const fs = require('fs')
-const uuid = require('uuid')
+const { v4: uuid } = require('uuid')
 const crypto = require('crypto')
 const path = require('path')
-const fetch = require('node-fetch')
 
 const { fetchFromGithub } = require('./github-source')
 
@@ -228,7 +227,7 @@ async function fetchRenderedReadme (repo, cache) {
     if (!obj) {
       try {
         obj = { created: Date.now() }
-        const headers = new fetch.Headers()
+        const headers = new Headers()
         headers.set('Authorization', `Bearer ${process.env.GRAPHQL_TOKEN}`)
         headers.set('Content-Type', 'text/plain')
         headers.set('Accept', '*/*')

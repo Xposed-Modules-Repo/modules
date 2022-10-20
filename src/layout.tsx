@@ -1,7 +1,7 @@
 import * as React from 'react'
 import {
   Container,
-  createMuiTheme,
+  createTheme,
   CssBaseline,
   Drawer,
   List,
@@ -12,7 +12,7 @@ import {
   useMediaQuery
 } from '@material-ui/core'
 import { blue } from '@material-ui/core/colors'
-import { createStyles, fade, makeStyles, Theme } from '@material-ui/core/styles'
+import { createStyles, alpha, makeStyles, Theme } from '@material-ui/core/styles'
 import AppBar from '@material-ui/core/AppBar'
 import Toolbar from '@material-ui/core/Toolbar'
 import IconButton from '@material-ui/core/IconButton'
@@ -26,10 +26,10 @@ import './styles.styl'
 import { Link, useStaticQuery, graphql } from 'gatsby'
 import { useEffect, useState } from 'react'
 import { useFlexSearch } from 'react-use-flexsearch'
-import FlexSearch from 'flexsearch'
 import * as flexsearchConfig from './flexsearch-config'
 import { useDebounce } from './debounce'
 import SearchResultCard from './components/search-result-card'
+import FlexSearch from "flexsearch";
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -53,9 +53,9 @@ const useStyles = makeStyles((theme: Theme) =>
     search: {
       position: 'relative',
       borderRadius: theme.shape.borderRadius,
-      backgroundColor: fade(theme.palette.common.white, 0.15),
+      backgroundColor: alpha(theme.palette.common.white, 0.15),
       '&:hover': {
-        backgroundColor: fade(theme.palette.common.white, 0.25)
+        backgroundColor: alpha(theme.palette.common.white, 0.25)
       },
       marginLeft: 0,
       marginRight: '12px',
@@ -115,6 +115,7 @@ const useStyles = makeStyles((theme: Theme) =>
 )
 
 let previousLoaded = false
+
 const index = FlexSearch.create(flexsearchConfig)
 
 function Layout (props: { children: React.ReactNode }): React.ReactElement {
@@ -240,7 +241,7 @@ export default function LayoutWithTheme (props: { children: React.ReactNode }): 
     noSsr: true
   })
   const theme = React.useMemo(
-    () => createMuiTheme({
+    () => createTheme({
       palette: {
         type: prefersDarkMode ? 'dark' : 'light',
         primary: { main: prefersDarkMode ? '#333' : blue[600] },

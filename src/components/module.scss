@@ -1,14 +1,14 @@
-@use "~@primer/primitives/dist/scss/colors_v2/light" as primer-light;
-@use "~@primer/primitives/dist/scss/colors_v2/dark_dimmed" as primer-dark;
+@use "~@primer/primitives/dist/scss/colors/_light" as primer-light;
+@use "~@primer/primitives/dist/scss/colors/_dark_dimmed" as primer-dark;
 @use '~@primer/css/markdown/index';
 
 .markdown-body {
   @media (prefers-color-scheme: light) {
-    @include primer-light.primer-colors_v2-light;
+    @include primer-light.primer-colors-light;
     @import '~github-syntax-light/lib/github-light';
   }
   @media (prefers-color-scheme: dark) {
-    @include primer-dark.primer-colors_v2-dark-dimmed;
+    @include primer-dark.primer-colors-dark-dimmed;
     @import '~github-syntax-dark/lib/github-dark';
   }
   font-family: Roboto, 'FZ SC', sans-serif !important;
