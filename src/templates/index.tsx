@@ -81,7 +81,7 @@ export default function IndexPage ({ data }: any): React.ReactElement {
 
 export const query = graphql`
 query ($skip: Int!, $limit: Int!) {
-  allGithubRepository(skip: $skip, limit: $limit, filter: {isModule: {eq: true}, hide: {eq: false}}) {
+  allGithubRepository(skip: $skip, limit: $limit, filter: {isModule: {eq: true}, hide: {eq: false}}, sort: {fields: latestReleaseTime, order: DESC}) {
     edges {
       node {
         name
