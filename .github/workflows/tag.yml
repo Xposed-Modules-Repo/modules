@@ -22,6 +22,7 @@ jobs:
           AAPT=$(ls $ANDROID_SDK_ROOT/build-tools/**/aapt2 | tail -1)
           VERCODE=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
           VERNAME=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionName='\([^']*\)'.*/\1/p")
+          VERNAME="${VERNAME// /_}"
           echo $VERCODE-$VERNAME
           mkdir test
           cd test
