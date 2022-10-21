@@ -203,7 +203,7 @@ export default function Module ({ data }: any): ReactElement {
                     href=""
                     onClick={(e) => {
                       e.preventDefault()
-                      setShowReleaseNum(showReleaseNum + 1)
+                      setShowReleaseNum(data.githubRepository.releases.edges.length)
                     }}
                   >Show older versions</a>
                 </p>)
