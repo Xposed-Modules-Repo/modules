@@ -3,6 +3,7 @@ import * as React from 'react'
 import {Grid, Tooltip} from '@material-ui/core'
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles'
 import './module.scss'
+import { filesize } from "filesize";
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -187,7 +188,7 @@ export default function Module ({ data }: any): ReactElement {
                         <h3>Downloads</h3>
                         <ul>
                           {release.releaseAssets.edges.map(({ node: asset }: any) => (
-                            <Tooltip title={asset.downloadCount} placement="bottom-start">
+                            <Tooltip title={`${asset.downloadCount} downloads in ${filesize(asset.size)}`} placement="bottom-start">
                               <li key={asset.name} >
                                 <a href={asset.downloadUrl} target={'_blank'}>{asset.name}</a>
                               </li>

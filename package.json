@@ -32,6 +32,7 @@
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
+    "filesize": "^10.0.5",
     "flexsearch": "^0.6.32",
     "gatsby": "^4.24.4",
     "gatsby-plugin-local-search": "^2.0.1",

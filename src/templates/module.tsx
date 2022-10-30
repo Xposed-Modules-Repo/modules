@@ -74,6 +74,7 @@ query ($name: String!) {
                 contentType
                 downloadUrl
                 downloadCount
+                size
               }
             }
           }

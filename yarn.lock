@@ -7269,6 +7269,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"filesize@npm:^10.0.5":
+  version: 10.0.5
+  resolution: "filesize@npm:10.0.5"
+  checksum: b373ebd877566a49566564709c221943741a6e264649ae1f5d6c87c31cd87e94c5e51dae8ee16abbe414fda3fdb6855d8fe4f0ed8d1e33327563d2b59176eaa1
+  languageName: node
+  linkType: hard
+
 "filesize@npm:^8.0.6":
   version: 8.0.7
   resolution: "filesize@npm:8.0.7"
@@ -11046,6 +11053,7 @@ __metadata:
     eslint-plugin-import: 2.26.0
     eslint-plugin-node: 11.1.0
     eslint-plugin-promise: 6.1.1
+    filesize: ^10.0.5
     flexsearch: ^0.6.32
     gatsby: ^4.24.4
     gatsby-plugin-local-search: ^2.0.1

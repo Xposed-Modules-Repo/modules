@@ -74,6 +74,7 @@ function makeRepositoriesQuery (cursor) {
                   contentType
                   downloadUrl
                   downloadCount
+                  size
                 }
               }
             }
@@ -99,6 +100,7 @@ function makeRepositoriesQuery (cursor) {
                       contentType
                       downloadUrl
                       downloadCount
+                      size
                     }
                   }
                 }
@@ -433,6 +435,7 @@ exports.onPostBuild = async ({ graphql }) => {
                 contentType
                 downloadUrl
                 downloadCount
+                size
               }
             }
           }
@@ -455,6 +458,7 @@ exports.onPostBuild = async ({ graphql }) => {
                 contentType
                 downloadUrl
                 downloadCount
+                size
               }
             }
           }
@@ -477,6 +481,7 @@ exports.onPostBuild = async ({ graphql }) => {
                 contentType
                 downloadUrl
                 downloadCount
+                size
               }
             }
           }
@@ -504,6 +509,7 @@ exports.onPostBuild = async ({ graphql }) => {
                     contentType
                     downloadUrl
                     downloadCount
+                    size
                   }
                 }
               }
