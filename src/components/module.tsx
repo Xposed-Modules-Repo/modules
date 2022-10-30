@@ -1,6 +1,6 @@
 import { ReactElement, useState } from 'react'
 import * as React from 'react'
-import { Grid } from '@material-ui/core'
+import {Grid, Tooltip} from '@material-ui/core'
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles'
 import './module.scss'
 
@@ -187,9 +187,11 @@ export default function Module ({ data }: any): ReactElement {
                         <h3>Downloads</h3>
                         <ul>
                           {release.releaseAssets.edges.map(({ node: asset }: any) => (
-                            <li key={asset.name}>
-                              <a href={asset.downloadUrl} target={'_blank'}>{asset.name}</a>
-                            </li>
+                            <Tooltip title={asset.downloadCount} placement="bottom-start">
+                              <li key={asset.name} >
+                                <a href={asset.downloadUrl} target={'_blank'}>{asset.name}</a>
+                              </li>
+                            </Tooltip>
                           ))}
                         </ul>
                       </div>)

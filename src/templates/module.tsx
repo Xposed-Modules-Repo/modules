@@ -73,6 +73,7 @@ query ($name: String!) {
                 name
                 contentType
                 downloadUrl
+                downloadCount
               }
             }
           }
