@@ -421,7 +421,6 @@ exports.onPostBuild = async ({ graphql }) => {
           name
           url
           isDraft
-          description
           descriptionHTML
           createdAt
           publishedAt
@@ -444,7 +443,6 @@ exports.onPostBuild = async ({ graphql }) => {
           name
           url
           isDraft
-          description
           descriptionHTML
           createdAt
           publishedAt
@@ -467,7 +465,6 @@ exports.onPostBuild = async ({ graphql }) => {
           name
           url
           isDraft
-          description
           descriptionHTML
           createdAt
           publishedAt
@@ -495,7 +492,6 @@ exports.onPostBuild = async ({ graphql }) => {
               name
               url
               isDraft
-              description
               descriptionHTML
               createdAt
               publishedAt
@@ -561,6 +557,8 @@ exports.onPostBuild = async ({ graphql }) => {
         repo.snapshotReleases = [latestSnapshotRelease]
     }
     if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
+    delete repo.readme
+    delete repo.childGitHubReadme
   }
   fs.writeFileSync(`${rootPath}/modules.json`, JSON.stringify(modules))
 }
