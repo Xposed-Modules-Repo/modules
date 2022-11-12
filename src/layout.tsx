@@ -221,7 +221,7 @@ function Layout (props: { children: React.ReactNode }): React.ReactElement {
         <>{props.children}</>
       </Container>
       <div className={classes.footer}>
-        2021 New Xposed Module Repository
+        {new Date().getFullYear()} New Xposed Module Repository
       </div>
     </div>
   )
