@@ -27,6 +27,7 @@
     "@types/react-helmet": "^6.1.5",
     "@typescript-eslint/eslint-plugin": "5.40.1",
     "@typescript-eslint/parser": "^5.40.1",
+    "ellipsize": "^0.5.1",
     "eslint": "8.25.0",
     "eslint-config-standard-with-typescript": "^23.0.0",
     "eslint-plugin-import": "2.26.0",

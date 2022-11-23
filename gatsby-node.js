@@ -2,6 +2,7 @@ const fs = require('fs')
 const { v4: uuid } = require('uuid')
 const crypto = require('crypto')
 const path = require('path')
+const ellipsize = require('ellipsize')
 
 const { fetchFromGithub } = require('./github-source')
 
@@ -148,7 +149,7 @@ const generateGatsbyNode = (result, createNode) => {
 
 function parseRepositoryObject (repo) {
   if (repo.summary) {
-    repo.summary = repo.summary.text.trim()
+    repo.summary = ellipsize(repo.summary.text.trim(), 512).trim()
   }
   if (repo.readme) {
     repo.readme = repo.readme.text
