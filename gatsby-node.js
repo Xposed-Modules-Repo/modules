@@ -149,7 +149,7 @@ const generateGatsbyNode = (result, createNode) => {
 
 function parseRepositoryObject (repo) {
   if (repo.summary) {
-    repo.summary = ellipsize(repo.summary.text.trim(), 512).trim()
+    repo.summary = ellipsize(repo.summary.text.trim(), 512, { ellipse: '...' }).trim()
   }
   if (repo.readme) {
     repo.readme = repo.readme.text
