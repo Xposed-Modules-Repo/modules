@@ -6,7 +6,7 @@ const ellipsize = require('ellipsize')
 
 const { fetchFromGithub } = require('./github-source')
 
-const PAGINATION = 8
+const PAGINATION = 6
 function makeRepositoriesQuery (cursor) {
   const arg = cursor ? `, after: "${cursor}"` : ''
   return `
