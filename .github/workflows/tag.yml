@@ -11,7 +11,9 @@ on:
       apk:
         description: 'apk url'
         required: true
-        default: 'null'
+      tag:
+        description: 'tag name'
+        required: true
 
 jobs:
   update_tag:
@@ -23,7 +25,10 @@ jobs:
           VERCODE=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
           VERNAME=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionName='\([^']*\)'.*/\1/p")
           VERNAME="${VERNAME// /_}"
-          echo $VERCODE-$VERNAME
+          echo '${{ github.event.inputs.apk }}' "-> $VERCODE-$VERNAME"
+          if [[ '${{ github.event.inputs.apk }}' == "$VERCODE-$VERNAME" ]]; then
+            exit
+          fi
           mkdir test
           cd test
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
