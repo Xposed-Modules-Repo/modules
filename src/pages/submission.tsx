@@ -132,7 +132,7 @@ export default function SubmissionPage (): ReactElement {
             ? (<div className={classes.flex}>
               <span className={classes.labelInput}>Package name: </span>
               <TextField
-                label={packageName ? isPackageNameValid() ? 'Package name' : 'Invalid package name' : 'org.meowcat.example'}
+                label={packageName ? isPackageNameValid() ? 'Package name' : 'Invalid package name' : 'io.github.username.example'}
                 className={classes.formInput}
                 value={packageName}
                 error={!!packageName && !isPackageNameValid()}
