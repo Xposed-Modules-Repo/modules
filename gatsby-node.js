@@ -325,6 +325,10 @@ exports.sourceNodes = async (
       console.error(result.errors)
       break
     }
+    if (!result.data) {
+      console.error('result.data is null')
+      break
+    }
     mergedResult.data.organization.repositories.edges =
       mergedResult.data.organization.repositories.edges.concat(result.data.organization.repositories.edges)
     if (!result.data.organization.repositories.pageInfo.hasNextPage) {
