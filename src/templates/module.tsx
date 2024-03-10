@@ -5,17 +5,18 @@ import { graphql } from 'gatsby'
 import SEO from '../components/seo'
 import Module from '../components/module'
 
-export default function ModulePage ({ data }: any): ReactElement {
-  const getSummary = (repo: any): string => {
-    let summary = ''
-    if (repo.summary) summary = repo.summary
-    else if (repo.readmeHTML) {
-      summary = repo.readmeHTML
-    } else if (repo.childGitHubReadme) {
-      summary = repo.childGitHubReadme.childMarkdownRemark.excerpt
-    }
-    return summary
+const getSummary = (repo: any): string => {
+  let summary = ''
+  if (repo.summary) summary = repo.summary
+  else if (repo.readmeHTML) {
+    summary = repo.readmeHTML
+  } else if (repo.childGitHubReadme) {
+    summary = repo.childGitHubReadme.childMarkdownRemark.excerpt
   }
+  return summary
+}
+
+export default function ModulePage ({ data }: any): ReactElement {
   return (
     <Layout>
       <SEO title={data.githubRepository.description} description={getSummary(data.githubRepository)} />
@@ -84,3 +85,4 @@ query ($name: String!) {
   }
 }
 `
+export const Head = ({ data }: any) => <SEO title={data.githubRepository.description} description={getSummary(data.githubRepository)} />

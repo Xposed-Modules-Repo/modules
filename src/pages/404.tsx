@@ -7,8 +7,9 @@ import _404 from '../components/404'
 export default function NotFoundPage (): ReactElement {
   return (
     <Layout>
-      <SEO title="Not Found" />
       <_404 />
     </Layout>
   )
 }
+
+export const Head = () => <SEO title="Not Found" />

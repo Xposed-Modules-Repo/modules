@@ -106,7 +106,6 @@ export default function SubmissionPage (): ReactElement {
   }
   return (
     <Layout>
-      <SEO title="Submission" />
       <Container maxWidth="sm" className={classes.landing}>
         <h1 className={classes.title}>Submit Your Xposed Module!</h1>
         <form>
@@ -173,3 +172,5 @@ export default function SubmissionPage (): ReactElement {
     </Layout>
   )
 }
+
+export const Head = () => <SEO title="Submission" />

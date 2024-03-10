@@ -47,7 +47,6 @@ export default function IndexPage ({ data }: any): React.ReactElement {
   }
   return (
     <Layout>
-      <SEO title={'Browse Modules'} />
       <h1 className={classes.title}>Xposed Module Repository</h1>
       <div className={classes.container}>
           {data.allGithubRepository.edges
@@ -122,3 +121,5 @@ export const query = graphql`query ($skip: Int!, $limit: Int!) {
     }
   }
 }`
+
+export const Head = () => <SEO title={'Browse Modules'} />

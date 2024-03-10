@@ -8,7 +8,6 @@
 import { graphql, useStaticQuery } from 'gatsby'
 import * as PropTypes from 'prop-types'
 import * as React from 'react'
-import Helmet from 'react-helmet'
 import { ReactElement } from 'react'
 
 function SEO ({ description, lang, meta, title, siteTitle, publishedTime, author, cover }: any): ReactElement {
@@ -85,18 +84,17 @@ function SEO ({ description, lang, meta, title, siteTitle, publishedTime, author
       name: 'og:image'
     })
   }
+  const metas = metaList.concat(meta).map(m => <meta content={m.content} name={m.name} property={m.property} />)
 
   return (
-    <Helmet
-      htmlAttributes={{
-        lang
-      }}
-      title={title}
-      titleTemplate={`%s - ${siteTitle as string || site.siteMetadata.title as string}`}
-      meta={metaList.concat(meta)}
-    />
+    <>
+      <html lang={lang} />
+      <title>{`${title} - ${siteTitle as string || site.siteMetadata.title as string}`}</title>
+      {metas}
+    </>
   )
 }
+
 
 SEO.defaultProps = {
   description: '',
