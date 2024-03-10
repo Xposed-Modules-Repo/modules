@@ -79,9 +79,13 @@ export default function IndexPage ({ data }: any): React.ReactElement {
   )
 }
 
-export const query = graphql`
-query ($skip: Int!, $limit: Int!) {
-  allGithubRepository(skip: $skip, limit: $limit, filter: {isModule: {eq: true}, hide: {eq: false}}, sort: {fields: latestReleaseTime, order: DESC}) {
+export const query = graphql`query ($skip: Int!, $limit: Int!) {
+  allGithubRepository(
+    skip: $skip
+    limit: $limit
+    filter: {isModule: {eq: true}, hide: {eq: false}}
+    sort: {latestReleaseTime: DESC}
+  ) {
     edges {
       node {
         name
@@ -117,5 +121,4 @@ query ($skip: Int!, $limit: Int!) {
       pageCount
     }
   }
-}
-`
+}`
