@@ -202,9 +202,8 @@ function parseRepositoryObject (repo) {
     repo.releases.edges.length &&
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
   if (repo.isModule) {
-    for (let i = 0; i < repo.releases.edges.length; i++) {
-      const release = repo.releases.edges[i]
-      repo.releases.edges[i].node.descriptionHTML = replacePrivateImage(release.node.description, release.node.descriptionHTML)
+    for (const release of repo.releases.edges) {
+      release.node.descriptionHTML = replacePrivateImage(release.node.description, release.node.descriptionHTML)
     }
     repo.latestRelease = repo.releases.edges.find(({node: { isPrerelease }}) => !isPrerelease)
     if (repo.latestRelease) {
