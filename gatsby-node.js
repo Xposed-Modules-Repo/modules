@@ -4,7 +4,7 @@ const crypto = require('crypto')
 const path = require('path')
 const ellipsize = require('ellipsize')
 
-const { fetchFromGithub } = require('./github-source')
+const { fetchFromGithub, replacePrivateImage } = require('./github-source')
 
 const PAGINATION = 10
 function makeRepositoriesQuery (cursor) {
@@ -202,6 +202,9 @@ function parseRepositoryObject (repo) {
     repo.releases.edges.length &&
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
   if (repo.isModule) {
+    for (const release of repo.releases.edges) {
+      release.node.descriptionHTML = replacePrivateImage(release.node.description, release.node.descriptionHTML)
+    }
     repo.latestRelease = repo.releases.edges.find(({node: { isPrerelease }}) => !isPrerelease)
     if (repo.latestRelease) {
         repo.latestRelease = repo.latestRelease.node
