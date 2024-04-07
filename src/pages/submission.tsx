@@ -173,4 +173,4 @@ export default function SubmissionPage (): ReactElement {
   )
 }
 
-export const Head = () => <SEO title="Submission" />
+export const Head = (): ReactElement => <SEO title="Submission" />

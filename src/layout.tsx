@@ -29,7 +29,7 @@ import { useFlexSearch } from 'react-use-flexsearch'
 import * as flexsearchConfig from './flexsearch-config'
 import { useDebounce } from './debounce'
 import SearchResultCard from './components/search-result-card'
-import FlexSearch from "flexsearch";
+import FlexSearch from 'flexsearch'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({

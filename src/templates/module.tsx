@@ -85,4 +85,4 @@ query ($name: String!) {
   }
 }
 `
-export const Head = ({ data }: any) => <SEO title={data.githubRepository.description} description={getSummary(data.githubRepository)} />
+export const Head = ({ data }: any): ReactElement => <SEO title={data.githubRepository.description} description={getSummary(data.githubRepository)} />

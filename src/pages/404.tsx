@@ -12,4 +12,4 @@ export default function NotFoundPage (): ReactElement {
   )
 }
 
-export const Head = () => <SEO title="Not Found" />
+export const Head = (): ReactElement => <SEO title="Not Found" />
