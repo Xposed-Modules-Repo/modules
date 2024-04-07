@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const glob = require('glob')
-const { v4 : md5 } = require('uuid')
+const { v4: md5 } = require('uuid')
 
 // Work around for caches on gh-pages
 // https://github.com/gatsbyjs/gatsby/issues/15080#issuecomment-765338035

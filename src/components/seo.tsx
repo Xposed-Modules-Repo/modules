@@ -89,12 +89,11 @@ function SEO ({ description, lang, meta, title, siteTitle, publishedTime, author
   return (
     <>
       <html lang={lang} />
-      <title>{`${title} - ${siteTitle as string || site.siteMetadata.title as string}`}</title>
+      <title>{`${title as string} - ${siteTitle as string || site.siteMetadata.title as string}`}</title>
       {metas}
     </>
   )
 }
-
 
 SEO.defaultProps = {
   description: '',

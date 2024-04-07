@@ -189,12 +189,12 @@ function parseRepositoryObject (repo) {
   repo.hide = !!repo.hide
   if (repo.releases) {
     if (repo.latestRelease) {
-        repo.releases.edges = [{ node: repo.latestRelease }, ...repo.releases.edges]
+      repo.releases.edges = [{ node: repo.latestRelease }, ...repo.releases.edges]
     }
     repo.releases.edges = repo.releases.edges
-    .filter(({ node: { releaseAssets, isDraft, isLatest, tagName } }) =>
-      !isLatest && !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
-      .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
+      .filter(({ node: { releaseAssets, isDraft, isLatest, tagName } }) =>
+        !isLatest && !isDraft && releaseAssets && tagName.match(/^\d+-.+$/) && releaseAssets.edges
+          .some(({ node: { contentType } }) => contentType === 'application/vnd.android.package-archive'))
   }
   repo.isModule = !!(repo.name.match(/\./) &&
     repo.description &&
@@ -205,23 +205,23 @@ function parseRepositoryObject (repo) {
     for (const release of repo.releases.edges) {
       release.node.descriptionHTML = replacePrivateImage(release.node.description, release.node.descriptionHTML)
     }
-    repo.latestRelease = repo.releases.edges.find(({node: { isPrerelease }}) => !isPrerelease)
+    repo.latestRelease = repo.releases.edges.find(({ node: { isPrerelease } }) => !isPrerelease)
     if (repo.latestRelease) {
-        repo.latestRelease = repo.latestRelease.node
-        repo.latestReleaseTime = repo.latestRelease.publishedAt
-        repo.latestRelease.isLatest = true
+      repo.latestRelease = repo.latestRelease.node
+      repo.latestReleaseTime = repo.latestRelease.publishedAt
+      repo.latestRelease.isLatest = true
     }
-    repo.latestBetaRelease = repo.releases.edges.find(({node: { isPrerelease, name }}) => isPrerelease && !name.match(/^(snapshot|nightly).*/i)) || {node: repo.latestRelease}
+    repo.latestBetaRelease = repo.releases.edges.find(({ node: { isPrerelease, name } }) => isPrerelease && !name.match(/^(snapshot|nightly).*/i)) || { node: repo.latestRelease }
     if (repo.latestBetaRelease) {
-        repo.latestBetaRelease = repo.latestBetaRelease.node
-        repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt
-        repo.latestBetaRelease.isLatestBeta = true
+      repo.latestBetaRelease = repo.latestBetaRelease.node
+      repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt
+      repo.latestBetaRelease.isLatestBeta = true
     }
-    repo.latestSnapshotRelease = repo.releases.edges.find(({node: { isPrerelease, name }}) => isPrerelease && name.match(/^(snapshot|nightly).*/i)) || {node: repo.latestBetaRelease}
+    repo.latestSnapshotRelease = repo.releases.edges.find(({ node: { isPrerelease, name } }) => isPrerelease && name.match(/^(snapshot|nightly).*/i)) || { node: repo.latestBetaRelease }
     if (repo.latestSnapshotRelease) {
-        repo.latestSnapshotRelease = repo.latestSnapshotRelease.node
-        repo.latestSnapshotReleaseTime = repo.latestSnapshotRelease.publishedAt
-        repo.latestSnapshotRelease.isLatestSnapshot = true
+      repo.latestSnapshotRelease = repo.latestSnapshotRelease.node
+      repo.latestSnapshotReleaseTime = repo.latestSnapshotRelease.publishedAt
+      repo.latestSnapshotRelease.isLatestSnapshot = true
     }
   }
   console.log(`Got repo: ${repo.name}, is module: ${repo.isModule}`)
@@ -242,7 +242,7 @@ async function fetchRenderedReadme (repo, cache) {
         console.log(`fetching readme: ${repo.name}`)
         const response = await fetch('https://api.github.com/markdown/raw', {
           method: 'POST',
-          headers: headers,
+          headers,
           body: repo.readme
         })
         obj.data = response.ok ? await response.text() : null
@@ -558,15 +558,15 @@ exports.onPostBuild = async ({ graphql }) => {
     const latestBetaRelease = repo.latestBetaRelease
     const latestSnapshotRelease = repo.latestSnapshotRelease
     repo.latestRelease = latestRelease ? latestRelease.tagName : undefined
-    repo.latestBetaRelease = latestBetaRelease  && repo.latestRelease !== latestBetaRelease.tagName ? latestBetaRelease.tagName : undefined
+    repo.latestBetaRelease = latestBetaRelease && repo.latestRelease !== latestBetaRelease.tagName ? latestBetaRelease.tagName : undefined
     repo.latestSnapshotRelease = latestSnapshotRelease && repo.latestBetaRelease !== latestSnapshotRelease.tagName && repo.latestRelease !== latestSnapshotRelease.tagName ? latestSnapshotRelease.tagName : undefined
     fs.writeFileSync(`${modulePath}/${repo.name}.json`, JSON.stringify(repo))
     repo.releases = latestRelease ? [latestRelease] : []
     if (repo.latestBetaRelease) {
-        repo.betaReleases = [latestBetaRelease]
+      repo.betaReleases = [latestBetaRelease]
     }
     if (repo.latestSnapshotRelease) {
-        repo.snapshotReleases = [latestSnapshotRelease]
+      repo.snapshotReleases = [latestSnapshotRelease]
     }
     if (!repo.readmeHTML && repo.readme) repo.readmeHTML = repo.childGitHubReadme.childMarkdownRemark.html
     delete repo.readme

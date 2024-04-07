@@ -6,6 +6,7 @@ import PaginationItem from '@material-ui/lab/PaginationItem'
 import RepoCard, { RepoCardProps } from '../components/repo-card'
 import { graphql, Link } from 'gatsby'
 import SEO from '../components/seo'
+import { ReactElement } from 'react'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -122,4 +123,4 @@ export const query = graphql`query ($skip: Int!, $limit: Int!) {
   }
 }`
 
-export const Head = () => <SEO title={'Browse Modules'} />
+export const Head = (): ReactElement => <SEO title={'Browse Modules'} />

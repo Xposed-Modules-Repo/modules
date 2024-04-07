@@ -30,6 +30,7 @@
     "eslint": "8.25.0",
     "eslint-config-standard-with-typescript": "^23.0.0",
     "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-n": "16.6.2",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
     "filesize": "^10.0.5",
