@@ -24,5 +24,8 @@ export const onPreRenderHTML = ({
   headComponents.push(
     <meta name="google-site-verification" content="No7OKPupiyITd5MI15QlaU1_u9raHcajSn8ffTPUGNI" />
   )
+  headComponents.push(
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9024466979216375" crossorigin="anonymous"></script>
+  )
   replaceHeadComponents(headComponents)
 }
