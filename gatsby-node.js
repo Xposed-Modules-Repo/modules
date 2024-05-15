@@ -3,13 +3,14 @@ const { v4: uuid } = require('uuid')
 const crypto = require('crypto')
 const path = require('path')
 const ellipsize = require('ellipsize')
+const { gql } =  require('@apollo/client')
 
 const { fetchFromGithub, replacePrivateImage } = require('./github-source')
 
 const PAGINATION = 10
 function makeRepositoriesQuery (cursor) {
   const arg = cursor ? `, after: "${cursor}"` : ''
-  return `
+  return gql`
 {
   organization(login: "Xposed-Modules-Repo") {
     repositories(first: ${PAGINATION}${arg}, orderBy: {field: UPDATED_AT, direction: DESC}, privacy: PUBLIC) {
