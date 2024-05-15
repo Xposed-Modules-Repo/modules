@@ -333,11 +333,9 @@ exports.sourceNodes = async (
       if (errorCount > 3) {
         throw errMsg
       }
-      // since retrying page won't help, we refetch all pages
-      mergedResult.data.organization.repositories.edges = []
-      cursor = null
-      page = 1
       continue
+    } else {
+      errorCount = 0
     }
     mergedResult.data.organization.repositories.edges =
       mergedResult.data.organization.repositories.edges.concat(result.data.organization.repositories.edges)
