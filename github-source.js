@@ -1,4 +1,6 @@
-const { ApolloClient, InMemoryCache, createHttpLink } = require('@apollo/client')
+const { ApolloClient, InMemoryCache, createHttpLink, from } = require('@apollo/client')
+const { RetryLink } = require('@apollo/client/link/retry')
+const { ApolloError } = require('@apollo/client/errors')
 
 const httpLink = createHttpLink({
   uri: 'https://api.github.com/graphql',
@@ -6,8 +8,36 @@ const httpLink = createHttpLink({
     authorization: `Bearer ${process.env.GRAPHQL_TOKEN}`,
   }
 })
+
+const retryLink = new RetryLink({
+  attempts: (count, _operation, /** @type {ApolloError} */ error) => {
+    return (count < 3 && error.networkError.statusCode == 403)
+  },
+  delay: (_count, operation, _error) => {
+    /** @type {Response} */
+    const response = operation.getContext()
+    const xRatelimitRemaining = parseInt(response.headers.get('x-ratelimit-remaining'))
+    if (!isNaN(xRatelimitRemaining) && xRatelimitRemaining > 0) {
+      console.error('[NetworkError] retry after 1 second')
+      return 1000
+    }
+    let retryAfter = parseInt(response.headers.get('retry-after'))
+    const xRateLimitReset = parseInt(response.headers.get('x-ratelimit-reset'))
+    if (isNaN(retryAfter) && isNaN(xRateLimitReset)) {
+      console.error('[NetworkError] response header missing...')
+      console.error('[NetworkError] retry after 1 min')
+      return 60 * 1000
+    }
+    if (isNan(retryAfter)) {
+      const retryAfter = (xRateLimitReset * 1000) - Date.now()
+      console.error(`[NetworkError] retry after ${retryAfter} ms`)
+    }
+    return retryAfter * 1000
+  },
+})
+
 const apolloClient = new ApolloClient({
-  link: httpLink,
+  link: from([retryLink, httpLink]),
   cache: new InMemoryCache(),
 })
 

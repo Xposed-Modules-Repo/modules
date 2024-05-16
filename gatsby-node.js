@@ -322,20 +322,13 @@ exports.sourceNodes = async (
       }
     }
   }
-  let errorCount = 0
   while (true) {
     console.log(`Querying GitHub API, page ${page}, total ${Math.ceil(total / PAGINATION) || 'unknown'}, cursor: ${cursor}`)
     const result = await fetchFromGithub(makeRepositoriesQuery(cursor))
     if (result.errors || !result.data) {
-      errorCount++
       const errMsg = result.errors || 'result.data is null'
       console.error(errMsg)
-      if (errorCount > 3) {
-        throw errMsg
-      }
-      continue
-    } else {
-      errorCount = 0
+      throw errMsg
     }
     mergedResult.data.organization.repositories.edges =
       mergedResult.data.organization.repositories.edges.concat(result.data.organization.repositories.edges)
