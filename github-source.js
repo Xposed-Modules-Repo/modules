@@ -14,8 +14,9 @@ const retryLink = new RetryLink({
     return count < 3
   },
   delay: (_count, operation, _error) => {
+    const context = operation.getContext()
     /** @type {Response} */
-    const response = operation.getContext()
+    const response = context.response
     const xRatelimitRemaining = parseInt(response.headers.get('x-ratelimit-remaining'))
     if (!isNaN(xRatelimitRemaining) && xRatelimitRemaining > 0) {
       console.error('[NetworkError] retry after 1 second')
