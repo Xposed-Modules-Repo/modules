@@ -29,7 +29,7 @@ const retryLink = new RetryLink({
       console.error('[NetworkError] retry after 1 min')
       return 60 * 1000
     }
-    if (isNan(retryAfter)) {
+    if (isNaN(retryAfter)) {
       const retryAfter = (xRateLimitReset * 1000) - Date.now()
       console.error(`[NetworkError] retry after ${retryAfter} ms`)
     }
