@@ -11,7 +11,7 @@ const httpLink = createHttpLink({
 
 const retryLink = new RetryLink({
   attempts: (count, _operation, /** @type {ApolloError} */ error) => {
-    return (count < 3 && error.networkError.statusCode == 403)
+    return count < 3
   },
   delay: (_count, operation, _error) => {
     /** @type {Response} */
