@@ -12,7 +12,6 @@ module.exports = {
     'gatsby-plugin-stylus',
     'gatsby-plugin-sitemap',
     'gatsby-plugin-sass',
-    'gatsby-plugin-material-ui',
     {
       resolve: 'gatsby-plugin-manifest',
       options: {
