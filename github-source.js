@@ -36,9 +36,22 @@ const retryLink = new RetryLink({
   },
 })
 
+/** @type {import('@apollo/client').DefaultOptions} */
+const defaultOptions = {
+  watchQuery: {
+    fetchPolicy: 'no-cache',
+    errorPolicy: 'ignore',
+  },
+  query: {
+    fetchPolicy: 'no-cache',
+    errorPolicy: 'all',
+  }
+}
+
 const apolloClient = new ApolloClient({
   link: from([retryLink, httpLink]),
   cache: new InMemoryCache(),
+  defaultOptions: defaultOptions,
 })
 
 const fetchFromGitHub = async (graphQLQuery) => {
