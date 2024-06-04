@@ -19,19 +19,19 @@ const retryLink = new RetryLink({
     const response = context.response
     const xRatelimitRemaining = parseInt(response.headers.get('x-ratelimit-remaining'))
     if (!isNaN(xRatelimitRemaining) && xRatelimitRemaining > 0) {
-      console.error('[NetworkError] retry after 1 second')
+      console.log('[NetworkError] retry after 1 second')
       return 1000
     }
     let retryAfter = parseInt(response.headers.get('retry-after'))
     const xRateLimitReset = parseInt(response.headers.get('x-ratelimit-reset'))
     if (isNaN(retryAfter) && isNaN(xRateLimitReset)) {
-      console.error('[NetworkError] response header missing...')
-      console.error('[NetworkError] retry after 1 min')
+      console.log('[NetworkError] response header missing...')
+      console.log('[NetworkError] retry after 1 min')
       return 60 * 1000
     }
     if (isNaN(retryAfter)) {
       const retryAfter = (xRateLimitReset * 1000) - Date.now()
-      console.error(`[NetworkError] retry after ${retryAfter} ms`)
+      console.log(`[NetworkError] retry after ${retryAfter} ms`)
     }
     return retryAfter * 1000
   },
