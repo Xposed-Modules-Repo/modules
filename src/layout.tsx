@@ -157,7 +157,7 @@ function Layout (props: { children: React.ReactNode }): React.ReactElement {
     localSearchRepositories.store,
     100
   ).sort((a, b) => {
-    const iq = (x: string?) => {
+    const iq = (x: string) => {
       if (!x) return false
       return x.toLowerCase().includes(debouncedSearchKeyword.toLowerCase())
     }
