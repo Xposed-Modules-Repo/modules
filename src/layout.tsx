@@ -157,12 +157,13 @@ function Layout (props: { children: React.ReactNode }): React.ReactElement {
     localSearchRepositories.store,
     100
   ).sort((a, b) => {
-    const iq = (x: string) => {
-      return x.toLocaleLowerCase().includes(debouncedSearchKeyword.toLowerCase())
+    const iq = (x: string?) => {
+      if (!x) return false
+      return x.toLowerCase().includes(debouncedSearchKeyword.toLowerCase())
     }
     if (iq(a.name) != iq(b.name)) return iq(b.name) - iq(a.name)
     if (iq(a.description) != iq(b.description)) return iq(b.description) - iq(a.description)
-    if ((a.summary && b.summary) && (iq(a.summary) != iq(b.summary))) return iq(b.summary) - iq(a.summary)
+    if (iq(a.summary) != iq(b.summary)) return iq(b.summary) - iq(a.summary)
     return 1
   }).slice(0, 6)
   const toggleDrawer = (): void => {
