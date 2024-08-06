@@ -162,7 +162,7 @@ function Layout (props: { children: React.ReactNode }): React.ReactElement {
     }
     if (iq(a.name) != iq(b.name)) return iq(b.name) - iq(a.name)
     if (iq(a.description) != iq(b.description)) return iq(b.description) - iq(a.description)
-    if (iq(a.summary) != iq(b.summary)) return iq(b.summary) - iq(a.summary)
+    if ((a.summary && b.summary) && (iq(a.summary) != iq(b.summary))) return iq(b.summary) - iq(a.summary)
     return 1
   }).slice(0, 6)
   const toggleDrawer = (): void => {
