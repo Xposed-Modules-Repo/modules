@@ -155,7 +155,7 @@ function Layout (props: { children: React.ReactNode }): React.ReactElement {
     debouncedSearchKeyword,
     index,
     localSearchRepositories.store,
-    5
+    8
   )
   const toggleDrawer = (): void => {
     setIsDrawerOpen(!isDrawerOpen)
