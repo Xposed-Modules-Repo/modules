@@ -4,6 +4,7 @@ const crypto = require('crypto')
 const path = require('path')
 const ellipsize = require('ellipsize')
 const { gql } =  require('@apollo/client')
+const { execFileSync } = require('child_process')
 
 const { fetchFromGithub, replacePrivateImage } = require('./github-source')
 
@@ -229,41 +230,6 @@ function parseRepositoryObject (repo) {
   return repo
 }
 
-async function fetchRenderedReadme (repo, cache) {
-  if (repo.readme && repo.isModule) {
-    const cacheKey = crypto.createHash('md5').update(repo.readme).digest('hex')
-    let obj = await cache.get(cacheKey)
-    if (!obj) {
-      try {
-        obj = { created: Date.now() }
-        const headers = new Headers()
-        headers.set('Authorization', `Bearer ${process.env.GRAPHQL_TOKEN}`)
-        headers.set('Content-Type', 'text/plain')
-        headers.set('Accept', '*/*')
-        console.log(`fetching readme: ${repo.name}`)
-        const response = await fetch('https://api.github.com/markdown/raw', {
-          method: 'POST',
-          headers,
-          body: repo.readme
-        })
-        obj.data = response.ok ? await response.text() : null
-        if (obj.data !== null) {
-          obj.data = obj.data.replace(/src="\/([^"]*)"/g, `src="https://github.com/Xposed-Modules-Repo/${repo.name}/raw/HEAD/$1"`).replace(/href="\/([^"]*)"/g, `href="https://github.com/Xposed-Modules-Repo/${repo.name}/blob/HEAD/$1"`)
-        }
-        obj.lastChecked = Date.now()
-        await cache.set(cacheKey, obj)
-      } catch (e) {
-        console.error(e)
-        obj = { data: null }
-      }
-    } else {
-      console.log(`readme: ${repo.name} read from cache`)
-    }
-    repo.readmeHTML = obj.data
-  }
-  return repo
-}
-
 exports.onCreateNode = async ({
   node,
   actions,
@@ -275,7 +241,20 @@ exports.onCreateNode = async ({
     for (let { node: repo } of node.data.organization.repositories.edges) {
       repo = JSON.parse(JSON.stringify(repo))
       repo = parseRepositoryObject(repo)
-      repo = await fetchRenderedReadme(repo, cache)
+      try {
+        repo.readmeHTML = execFileSync(
+          './bin/cmark-gfm',
+          ['--smart', '--validate-utf8', '--github-pre-lang', '-e', 'footnotes', '-e', 'table', '-e', 'strikethrough', '-e', 'autolink', '-e', 'tagfilter', '-e', 'tasklist', '--unsafe', '--strikethrough-double-tilde', '-t', 'html'],
+          { input: repo.readme },
+        ).toString()
+      } catch (e) {
+        if (err.code) {
+          console.error(err.code);
+        } else {
+          const { stdout, stderr } = err;
+          console.error({ stdout, stderr });
+        }
+      }
       await createNode({
         ...repo,
         id: repo.name,
