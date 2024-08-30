@@ -36,6 +36,6 @@ jobs:
           git init .
           git commit -m "$VERCODE-$VERNAME" --allow-empty
           git tag "$VERCODE-$VERNAME" -m "$VERCODE-$VERNAME" -f
-          git remote add origin "https://${{ secrets.GRAPHQL_TOKEN }}@github.com/Xposed-Modules-Repo/${{ github.event.inputs.repo }}.git"
+          git remote add origin "https://${{ secrets.GRAPHQL_TOKEN }}@github.com/${{ github.event.inputs.repo }}.git"
           git push origin "$VERCODE-$VERNAME" -f
           curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GRAPHQL_TOKEN }}" https://api.github.com/repos/Xposed-Modules-Repo/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d "{\"tag_name\":\"${VERCODE}-${VERNAME}\"}"
