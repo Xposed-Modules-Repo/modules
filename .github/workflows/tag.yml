@@ -14,7 +14,7 @@ on:
       tag:
         description: 'tag name'
         required: true
-
+run-name: ${{ github.event.inputs.repo }}
 jobs:
   update_tag:
     runs-on: ubuntu-latest
