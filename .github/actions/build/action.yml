@@ -4,6 +4,9 @@ inputs:
   repo:
     description: 'full name of repo'
     required: false
+  token:
+    description: 'token for graphql'
+    required: true
 runs:
   using: "composite"
   steps:
@@ -51,7 +54,7 @@ runs:
         yarn build
         echo "modules.lsposed.org" > ./public/CNAME
       env:
-        GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
+        GRAPHQL_TOKEN: ${{ inputs.token }}
         GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES: true
     - name: clean up caches on failure
       if: ${{ failure() || cancelled() }}

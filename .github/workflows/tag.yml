@@ -62,3 +62,5 @@ jobs:
           fetch-depth: 1
       - name: Build
         uses: ./.github/actions/build
+        with:
+          token: ${{ secrets.GRAPHQL_TOKEN }}
