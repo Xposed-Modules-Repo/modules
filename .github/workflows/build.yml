@@ -16,6 +16,8 @@ permissions:
   pages: write
   id-token: write
 
+run-name: Build ${{ github.event.inputs.repo }}
+
 jobs:
   deploy:
     concurrency:

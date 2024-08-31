@@ -14,7 +14,8 @@ on:
       tag:
         description: 'tag name'
         required: true
-run-name: ${{ github.event.inputs.repo }}
+
+run-name: Tag ${{ github.event.inputs.repo }}@${{ github.event.inputs.tag }}
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
