@@ -64,3 +64,4 @@ jobs:
         uses: ./.github/actions/build
         with:
           token: ${{ secrets.GRAPHQL_TOKEN }}
+          repo: ${{ github.event.inputs.repo }}

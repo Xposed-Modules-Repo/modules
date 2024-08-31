@@ -5,6 +5,10 @@ on:
     paths-ignore:
     - '.github/workflows/tag.yml'
   workflow_dispatch:
+    inputs:
+      repo:
+        description: 'repo name'
+        required: false
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -30,4 +34,5 @@ jobs:
         uses: ./.github/actions/build
         with:
           token: ${{ secrets.GRAPHQL_TOKEN }}
+          repo: ${{ github.event.inputs.repo }}
 
