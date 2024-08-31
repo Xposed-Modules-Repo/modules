@@ -1,0 +1,73 @@
+name: 'Build'
+description: 'Build page'
+inputs:
+  repo:
+    description: 'full name of repo'
+    required: false
+runs:
+  using: "composite"
+  name: Build Website
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    - name: Yarn cache directory
+      id: yarn-cache-dir
+      run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+    - name: cache yarn modules
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.yarn-cache-dir.outputs.dir }}
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: ${{ runner.os }}-yarn-
+    - name: cache gatsby cache
+      uses: actions/cache@v4
+      with:
+        path: .cache
+        key: ${{ runner.os }}-gatsby-cache-${{ github.run_id }}
+        restore-keys: ${{ runner.os }}-gatsby-cache-
+        save-always: true
+    - name: cache gatsby public
+      uses: actions/cache@v4
+      with:
+        path: public
+        key: ${{ runner.os }}-gatsby-public-${{ github.run_id }}
+        restore-keys: ${{ runner.os }}-gatsby-public-
+        save-always: true
+    - name: cache gatsby public-cache
+      uses: actions/cache@v4
+      with:
+        path: public-cache
+        key: ${{ runner.os }}-gatsby-public-cache-${{ github.run_id }}
+        restore-keys: ${{ runner.os }}-gatsby-public-cache-
+        save-always: true
+    - name: Restore cache
+      run: node gh-pages-cache-restore.js
+    - name: Install and Build 🔧 # This example project is built using yarn and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
+      run: |
+        yarn install --immutable
+        yarn build
+        echo "modules.lsposed.org" > ./public/CNAME
+      env:
+        GRAPHQL_TOKEN: ${{ secrets.GRAPHQL_TOKEN }}
+        GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES: true
+    - name: clean up caches on failure
+      if: ${{ failure() || cancelled() }}
+      run: |
+        rm -rf public/*
+        rm -rf public-cache/*
+        rm -rf .cache/*
+    - name: Refresh cache
+      run: node gh-pages-cache.js
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        # Upload entire repository
+        path: 'public'
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
