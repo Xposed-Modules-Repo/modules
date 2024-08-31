@@ -12,17 +12,19 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: ${{ github.sha }}
-  cancel-in-progress: true
-
 jobs:
   deploy:
+    concurrency:
+      group: ${{ github.sha }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     name: Build Website
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Build
         uses: ./.github/actions/build
