@@ -247,7 +247,7 @@ exports.onCreateNode = async ({
           ['--smart', '--validate-utf8', '--github-pre-lang', '-e', 'footnotes', '-e', 'table', '-e', 'strikethrough', '-e', 'autolink', '-e', 'tagfilter', '-e', 'tasklist', '--unsafe', '--strikethrough-double-tilde', '-t', 'html'],
           { input: repo.readme },
         ).toString()
-      } catch (e) {
+      } catch (err) {
         if (err.code) {
           console.error(err.code);
         } else {
