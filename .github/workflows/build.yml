@@ -9,6 +9,8 @@ on:
       repo:
         description: 'repo name'
         required: false
+  schedule:
+    - cron: "0 0 * * *"
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:

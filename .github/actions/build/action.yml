@@ -44,6 +44,13 @@ runs:
         key: ${{ runner.os }}-gatsby-public-cache-${{ github.run_id }}
         restore-keys: ${{ runner.os }}-gatsby-public-cache-
         save-always: true
+    - name: cache graphql response
+      uses: actions/cache@v4
+      with:
+        path: cached_graphql.json
+        key: ${{ runner.os }}-github-graphql-response-${{ github.run_id }}
+        restore-keys: ${{ runner.os }}-github-graphql-response-
+        save-always: true
     - name: Restore cache
       shell: bash
       run: node gh-pages-cache-restore.js
@@ -55,6 +62,7 @@ runs:
         echo "modules.lsposed.org" > ./public/CNAME
       env:
         GRAPHQL_TOKEN: ${{ inputs.token }}
+        REPO: ${{ inputs.repo }}
         GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES: true
     - name: clean up caches on failure
       if: ${{ failure() || cancelled() }}
@@ -63,6 +71,7 @@ runs:
         rm -rf public/*
         rm -rf public-cache/*
         rm -rf .cache/*
+        rm -f cached_graphql.json
     - name: Refresh cache
       shell: bash
       run: node gh-pages-cache.js

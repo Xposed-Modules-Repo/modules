@@ -8,6 +8,112 @@ const { execFileSync } = require('child_process')
 
 const { fetchFromGithub, replacePrivateImage } = require('./github-source')
 
+function makeRepositoryQuery (name) {
+  return gql`
+{
+  repository(owner: "Xposed-Modules-Repo", name: "${name}") {
+    name
+    description
+    url
+    homepageUrl
+    collaborators(affiliation: DIRECT, first: 100) {
+      edges {
+        node {
+          login
+          name
+        }
+      }
+    }
+    readme: object(expression: "HEAD:README.md") {
+      ... on Blob {
+        text
+      }
+    }
+    summary: object(expression: "HEAD:SUMMARY") {
+      ... on Blob {
+        text
+      }
+    }
+    scope: object(expression: "HEAD:SCOPE") {
+      ... on Blob {
+        text
+      }
+    }
+    sourceUrl: object(expression: "HEAD:SOURCE_URL") {
+      ... on Blob {
+        text
+      }
+    }
+    hide: object(expression: "HEAD:HIDE") {
+      ... on Blob {
+        text
+      }
+    }
+    additionalAuthors: object(expression: "HEAD:ADDITIONAL_AUTHORS") {
+      ... on Blob {
+        text
+      }
+    }
+    latestRelease {
+      name
+      url
+      isDraft
+      description
+      descriptionHTML
+      createdAt
+      publishedAt
+      updatedAt
+      tagName
+      isPrerelease
+      releaseAssets(first: 50) {
+        edges {
+          node {
+            name
+            contentType
+            downloadUrl
+            downloadCount
+            size
+          }
+        }
+      }
+    }
+    releases(first: 20) {
+      edges {
+        node {
+          name
+          url
+          isDraft
+          description
+          descriptionHTML
+          createdAt
+          publishedAt
+          updatedAt
+          tagName
+          isPrerelease
+          isLatest
+          releaseAssets(first: 50) {
+            edges {
+              node {
+                name
+                contentType
+                downloadUrl
+                downloadCount
+                size
+              }
+            }
+          }
+        }
+      }
+    }
+    updatedAt
+    createdAt
+    stargazerCount
+  }
+}
+  `
+}
+
+
 const PAGINATION = 10
 function makeRepositoriesQuery (cursor) {
   const arg = cursor ? `, after: "${cursor}"` : ''
@@ -292,7 +398,7 @@ exports.sourceNodes = async (
   let cursor = null
   let page = 1
   let total
-  const mergedResult = {
+  let mergedResult = {
     data: {
       organization: {
         repositories: {
@@ -301,23 +407,43 @@ exports.sourceNodes = async (
       }
     }
   }
-  while (true) {
-    console.log(`Querying GitHub API, page ${page}, total ${Math.ceil(total / PAGINATION) || 'unknown'}, cursor: ${cursor}`)
-    const result = await fetchFromGithub(makeRepositoriesQuery(cursor))
+  const repo_name = process.env.REPO ? process.env.REPO.split('/')[1] : null
+  if (repo_name && fs.existsSync('./cached_graphql.json')) {
+    const data = fs.readFileSync('./cached_graphql.json')
+    mergedResult = JSON.parse(data)
+    mergedResult.data.organization.repositories.edges.forEach((value, index, array) => {
+      if (value.node.name === repo_name) {
+        array.splice(index, 1)
+      }
+    })
+    console.log(`Fetching ${repo_name} from GitHub API`)
+    const result = await fetchFromGithub(makeRepositoryQuery(repo_name))
     if (result.errors || !result.data) {
       const errMsg = result.errors || 'result.data is null'
       console.error(errMsg)
       throw errMsg
     }
-    mergedResult.data.organization.repositories.edges =
-      mergedResult.data.organization.repositories.edges.concat(result.data.organization.repositories.edges)
-    if (!result.data.organization.repositories.pageInfo.hasNextPage) {
-      break
+    mergedResult.data.organization.repositories.edges.unshift({'node': result.data.repository})
+  } else {
+    while (true) {
+      console.log(`Querying GitHub API, page ${page}, total ${Math.ceil(total / PAGINATION) || 'unknown'}, cursor: ${cursor}`)
+      const result = await fetchFromGithub(makeRepositoriesQuery(cursor))
+      if (result.errors || !result.data) {
+        const errMsg = result.errors || 'result.data is null'
+        console.error(errMsg)
+        throw errMsg
+      }
+      mergedResult.data.organization.repositories.edges =
+        mergedResult.data.organization.repositories.edges.concat(result.data.organization.repositories.edges)
+      if (!result.data.organization.repositories.pageInfo.hasNextPage) {
+        break
+      }
+      cursor = result.data.organization.repositories.pageInfo.endCursor
+      total = result.data.organization.repositories.totalCount
+      page++
     }
-    cursor = result.data.organization.repositories.pageInfo.endCursor
-    total = result.data.organization.repositories.totalCount
-    page++
   }
+  fs.writeFileSync('./cached_graphql.json', JSON.stringify(mergedResult))
   generateGatsbyNode(mergedResult, createNode)
 }
 
