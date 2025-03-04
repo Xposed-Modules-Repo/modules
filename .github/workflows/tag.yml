@@ -17,12 +17,6 @@ on:
 
 run-name: Tag ${{ github.event.inputs.repo }}@${{ github.event.inputs.tag }}
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
   update_tag:
     runs-on: ubuntu-latest
@@ -47,22 +41,3 @@ jobs:
           git remote add origin "https://${{ secrets.GRAPHQL_TOKEN }}@github.com/${{ github.event.inputs.repo }}.git"
           git push origin "$VERCODE-$VERNAME" -f
           curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GRAPHQL_TOKEN }}" https://api.github.com/repos/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d "{\"tag_name\":\"${VERCODE}-${VERNAME}\"}"
-
-  deploy:
-    concurrency:
-      group: ${{ github.sha }}
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    name: Build Website
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      - name: Build
-        uses: ./.github/actions/build
-        with:
-          token: ${{ secrets.GRAPHQL_TOKEN }}
-          repo: ${{ github.event.inputs.repo }}
