@@ -84,7 +84,7 @@ export const query = graphql`query ($skip: Int!, $limit: Int!) {
     skip: $skip
     limit: $limit
     filter: {isModule: {eq: true}, hide: {eq: false}}
-    sort: {latestReleaseTime: DESC}
+    sort: [ { latestReleaseTime: DESC }, { latestBetaReleaseTime: DESC } ]
   ) {
     edges {
       node {
