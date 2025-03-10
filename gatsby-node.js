@@ -314,18 +314,21 @@ function parseRepositoryObject (repo) {
       release.node.descriptionHTML = replacePrivateImage(release.node.description, release.node.descriptionHTML)
     }
     repo.latestRelease = repo.releases.edges.find(({ node: { isPrerelease } }) => !isPrerelease)
+    repo.latestReleaseTime = '1970-01-01T00:00:00Z'
     if (repo.latestRelease) {
       repo.latestRelease = repo.latestRelease.node
-      repo.latestReleaseTime = repo.latestRelease.publishedAt || '1970-01-01T00:00:00Z'
+      repo.latestReleaseTime = repo.latestRelease.publishedAt
       repo.latestRelease.isLatest = true
     }
     repo.latestBetaRelease = repo.releases.edges.find(({ node: { isPrerelease, name } }) => isPrerelease && !name.match(/^(snapshot|nightly).*/i)) || { node: repo.latestRelease }
+    repo.latestBetaReleaseTime = '1970-01-01T00:00:00Z'
     if (repo.latestBetaRelease) {
       repo.latestBetaRelease = repo.latestBetaRelease.node
-      repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt || '1970-01-01T00:00:00Z'
+      repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt
       repo.latestBetaRelease.isLatestBeta = true
     }
     repo.latestSnapshotRelease = repo.releases.edges.find(({ node: { isPrerelease, name } }) => isPrerelease && name.match(/^(snapshot|nightly).*/i)) || { node: repo.latestBetaRelease }
+    repo.latestSnapshotReleaseTime = '1970-01-01T00:00:00Z'
     if (repo.latestSnapshotRelease) {
       repo.latestSnapshotRelease = repo.latestSnapshotRelease.node
       repo.latestSnapshotReleaseTime = repo.latestSnapshotRelease.publishedAt
