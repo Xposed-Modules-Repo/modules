@@ -316,13 +316,13 @@ function parseRepositoryObject (repo) {
     repo.latestRelease = repo.releases.edges.find(({ node: { isPrerelease } }) => !isPrerelease)
     if (repo.latestRelease) {
       repo.latestRelease = repo.latestRelease.node
-      repo.latestReleaseTime = repo.latestRelease.publishedAt
+      repo.latestReleaseTime = repo.latestRelease.publishedAt || '1970-01-01T00:00:00Z'
       repo.latestRelease.isLatest = true
     }
     repo.latestBetaRelease = repo.releases.edges.find(({ node: { isPrerelease, name } }) => isPrerelease && !name.match(/^(snapshot|nightly).*/i)) || { node: repo.latestRelease }
     if (repo.latestBetaRelease) {
       repo.latestBetaRelease = repo.latestBetaRelease.node
-      repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt
+      repo.latestBetaReleaseTime = repo.latestBetaRelease.publishedAt || '1970-01-01T00:00:00Z'
       repo.latestBetaRelease.isLatestBeta = true
     }
     repo.latestSnapshotRelease = repo.releases.edges.find(({ node: { isPrerelease, name } }) => isPrerelease && name.match(/^(snapshot|nightly).*/i)) || { node: repo.latestBetaRelease }
