@@ -40,4 +40,4 @@ jobs:
           git tag "$VERCODE-$VERNAME" -m "$VERCODE-$VERNAME" -f
           git remote add origin "https://${{ secrets.TAG_TOKEN }}@github.com/${{ github.event.inputs.repo }}.git"
           git push origin "$VERCODE-$VERNAME" -f
-          curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.GRAPHQL_TOKEN }}" https://api.github.com/repos/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d "{\"tag_name\":\"${VERCODE}-${VERNAME}\"}"
+          curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.TAG_TOKEN }}" https://api.github.com/repos/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d "{\"tag_name\":\"${VERCODE}-${VERNAME}\"}"
