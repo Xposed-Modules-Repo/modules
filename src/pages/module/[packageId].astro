@@ -1,0 +1,126 @@
+---
+import type { InferGetStaticParamsType, GetStaticPaths } from "astro"
+import Layout from "../../layouts/Layout.astro"
+import modules from "../../../.cache/modules.json"
+
+export const getStaticPaths = (() => {
+  return modules.map((m) => {
+    return {
+      params: {
+        packageId: m.name,
+      },
+    }
+  })
+}) satisfies GetStaticPaths
+
+type Params = InferGetStaticParamsType<typeof getStaticPaths>
+
+const { packageId } = Astro.params as Params
+const module = modules.find((m) => {
+  return m.name == packageId
+})!
+
+const authors =
+  module.collaborators.map((a) => {
+    return {
+      href: `https://github.com/${a.login}`,
+      name: a.name ? a.name : a.login,
+    }
+  }) || []
+---
+
+<Layout title={module.description} description={module.summary}>
+  <div class="flex flex-col gap-4 mx-8 my-8">
+    <div class="flex flex-col md:flex-row gap-4">
+      <div class="basis-3/4">
+        <article
+          class="prose prose-img:inline prose-img:mt-0 prose-img:mb-0 prose-table:w-auto"
+          set:html={module.readmeHTML}
+          data-pagefind-body
+        />
+      </div>
+      <div class="basis-1/4 flex flex-col gap-2">
+        <div class="card shadow-sm bg-base-100">
+          <div class="card-body">
+            <h2 class="card-title">Package</h2>
+            <p data-pagefind-meta="package">{packageId}</p>
+          </div>
+        </div>
+        {
+          authors && (
+            <div class="card shadow-sm bg-base-100">
+              <div class="card-body">
+                <h2 class="card-title">Authors</h2>
+                {authors.map((a) => (
+                  <a data-pagefind-meta="author" class="link" href={a.href}>
+                    {a.name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )
+        }
+        {
+          module.homepageUrl && (
+            <div class="card shadow-sm bg-base-100">
+              <div class="card-body">
+                <h2 class="card-title">Support / Discussion URL</h2>
+                <a class="link" href={module.homepageUrl}>
+                  {module.homepageUrl}
+                </a>
+              </div>
+            </div>
+          )
+        }
+        <div class="card shadow-sm bg-base-100 hidden md:flex">
+          <div class="card-body">
+            <h2 class="card-title">Latest Release</h2>
+            <a class="link" href={module.releases[0].url}
+              >{module.latestRelease}</a
+            >
+            <p>
+              Release type: {
+                module.releases[0].isPrerelease ? "Pre-release" : "Stable"
+              }
+            </p>
+            <p>{new Date(module.releases[0].publishedAt).toLocaleString()}</p>
+            <a class="link" href="#releases">Show all releases</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="text-4xl font-extrabold" id="releases">Releases</p>
+    <div class="flex flex-col gap-2">
+      {
+        module.releases.map((r) => (
+          <div class="card shadow-sm bg-base-100">
+            <div class="card-body">
+              <h2 class="card-title">
+                <a class="link text-2xl" href={r.url}>
+                  {r.name}
+                </a>
+              </h2>
+              <p>Release type: {r.isPrerelease ? "Pre-release" : "Stable"}</p>
+              <p>{new Date(r.publishedAt).toLocaleString()}</p>
+              <div class="divider" />
+              <article
+                class="prose prose-img:inline prose-img:mt-0 prose-img:mb-0 prose-table:w-auto"
+                set:html={r.descriptionHTML}
+              />
+              <div class="divider" />
+              <ul>
+                {r.releaseAssets.map((a) => (
+                  <li>
+                    <a class="link" href={a.downloadUrl}>
+                      {a.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</Layout>

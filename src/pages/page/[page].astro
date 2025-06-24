@@ -1,0 +1,45 @@
+---
+import type { InferGetStaticPropsType, GetStaticPaths } from "astro"
+type Props = InferGetStaticPropsType<typeof getStaticPaths>
+
+import ModuleCard from "../../components/ModuleCard.astro"
+import Layout from "../../layouts/Layout.astro"
+
+import modules from "../../../.cache/modules.json"
+
+export const getStaticPaths = (({ paginate }) => {
+  return paginate(modules, { pageSize: 20 })
+}) satisfies GetStaticPaths
+
+const { page } = Astro.props
+---
+
+<Layout>
+  <div class="grid md:grid-cols-2 gap-2 mx-2 my-2">
+    {
+      page.data.map((m) => {
+        return (
+          <ModuleCard
+            repoUrl={m.url}
+            packageName={m.name}
+            title={m.description}
+            desc={m.summary}
+            website={m.homepageUrl}
+            source={m.sourceUrl}
+          />
+        )
+      })
+    }
+  </div>
+  <div class="join flex align-center justify-center my-2">
+    <a href={page.url.prev}>
+      <button class="join-item btn btn-md">«</button>
+    </a>
+    <button class="join-item btn btn-md"
+      >{page.currentPage} / {page.lastPage}</button
+    >
+    <a href={page.url.next}>
+      <button class="join-item btn btn-md">»</button>
+    </a>
+  </div>
+</Layout>

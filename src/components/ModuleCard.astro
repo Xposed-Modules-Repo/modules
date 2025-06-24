@@ -1,0 +1,18 @@
+---
+const { repoUrl, packageName, title, desc, website, source } = Astro.props
+const newWebsite = website ? website : repoUrl
+const newSource = source ? source : repoUrl
+const detailsUrl = `/module/${packageName}`
+---
+
+<div class="card shadow-sm bg-base-100">
+  <div class="card-body">
+    <h2 class="card-title">{title}</h2>
+    <p>{desc}</p>
+    <div class="card-actions justify-end">
+      <a href={newWebsite} class="btn btn-soft btn-info">Website</a>
+      <a href={newSource} class="btn btn-soft btn-info">Source</a>
+      <a href={detailsUrl} class="btn btn-info">Details</a>
+    </div>
+  </div>
+</div>

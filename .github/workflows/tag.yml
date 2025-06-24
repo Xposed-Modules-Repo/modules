@@ -1,0 +1,43 @@
+name: Tag
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "repo name"
+        required: true
+      release:
+        description: "release id"
+        required: true
+      apk:
+        description: "apk url"
+        required: true
+      tag:
+        description: "tag name"
+        required: true
+
+run-name: Tag ${{ github.event.inputs.repo }}@${{ github.event.inputs.tag }}
+
+jobs:
+  update_tag:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          wget -O release.apk '${{ github.event.inputs.apk }}'
+          AAPT=$(ls $ANDROID_SDK_ROOT/build-tools/**/aapt2 | tail -1)
+          VERCODE=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionCode='\([0-9]*\)'.*/\1/p")
+          VERNAME=$($AAPT dump badging release.apk | head -1 | sed -n "/^package:/ s/^.*versionName='\([^']*\)'.*/\1/p")
+          VERNAME="${VERNAME// /_}"
+          echo '${{ github.event.inputs.tag }}' "-> $VERCODE-$VERNAME"
+          if [[ '${{ github.event.inputs.tag }}' == "$VERCODE-$VERNAME" ]]; then
+            exit
+          fi
+          mkdir test
+          cd test
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git init .
+          git commit -m "$VERCODE-$VERNAME" --allow-empty
+          git tag "$VERCODE-$VERNAME" -m "$VERCODE-$VERNAME" -f
+          git remote add origin "https://${{ secrets.TAG_TOKEN }}@github.com/${{ github.event.inputs.repo }}.git"
+          git push origin "$VERCODE-$VERNAME" -f
+          curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: Bearer ${{ secrets.TAG_TOKEN }}" https://api.github.com/repos/${{ github.event.inputs.repo }}/releases/${{ github.event.inputs.release }} -d "{\"tag_name\":\"${VERCODE}-${VERNAME}\"}"

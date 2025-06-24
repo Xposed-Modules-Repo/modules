@@ -1,0 +1,41 @@
+name: Build
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+    - '.github/workflows/tag.yml'
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'repo name'
+        required: false
+  schedule:
+    - cron: "0 0 * * *"
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+run-name: Build ${{ github.event.inputs.repo }}
+
+jobs:
+  deploy:
+    concurrency:
+      group: ${{ github.sha }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    name: Build Website
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          token: ${{ secrets.GRAPHQL_TOKEN }}
+          repo: ${{ github.event.inputs.repo }}

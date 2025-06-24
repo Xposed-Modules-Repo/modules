@@ -1,0 +1,65 @@
+name: 'Build'
+description: 'Build page'
+inputs:
+  repo:
+    description: 'full name of repo'
+    required: false
+  token:
+    description: 'token for graphql'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout your repository using git
+      uses: actions/checkout@v4
+    - name: Cache
+      uses: actions/cache@v4
+      with:
+        path: .cache
+        key: ${{ runner.os }}-cache-${{ github.run_id }}
+        restore-keys: ${{ runner.os }}-cache-
+        save-always: true
+
+    # reference
+    # - name: Install, build, and upload your site
+    #   uses: withastro/action@v3
+    #   with:
+    #     package-manager: pnpm@latest
+
+    - name: Setup PNPM
+      uses: pnpm/action-setup@v4
+      with:
+        version: latest
+        package_json_file: "./package.json"
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: "./pnpm-lock.yaml"
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+    - name: Install
+      shell: "bash"
+      run: pnpm install
+
+    - name: Fetch repositorie(s)
+      shell: "bash"
+      env:
+        REPO: ${{ inputs.repo }}
+        GRAPHQL_TOKEN: ${{ inputs.token }}
+      run: pnpm tsx ./script/run.ts
+
+    - name: Build
+      shell: "bash"
+      working-directory: ${{ inputs.path }}
+      run: pnpm run build
+
+    - name: Upload Pages Artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: "${{ inputs.path }}/dist/"
