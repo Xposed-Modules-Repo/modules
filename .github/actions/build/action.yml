@@ -39,27 +39,22 @@ runs:
         cache: pnpm
         cache-dependency-path: "./pnpm-lock.yaml"
 
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
-
     - name: Install
       shell: "bash"
       run: pnpm install
 
-    - name: Fetch repositorie(s)
+    - name: Build
       shell: "bash"
       env:
         REPO: ${{ inputs.repo }}
         GRAPHQL_TOKEN: ${{ inputs.token }}
-      run: pnpm tsx ./script/run.ts
-
-    - name: Build
-      shell: "bash"
-      working-directory: ${{ inputs.path }}
-      run: pnpm run build
+      run: pnpm run xbuild
 
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: "${{ inputs.path }}/dist/"
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "xbuild": "tsx ./script/run.ts && astro build"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.4.1",
