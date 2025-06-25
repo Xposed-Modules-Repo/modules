@@ -11,7 +11,7 @@ import pagefind from 'astro-pagefind'
 export default defineConfig({
   prefetch: {
     prefetchAll: true
-  }
+  },
   site: 'https://modules.lsposed.org',
 
   integrations: [
