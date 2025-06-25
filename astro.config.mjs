@@ -9,6 +9,7 @@ import pagefind from 'astro-pagefind'
 
 // https://astro.build/config
 export default defineConfig({
+  prefetch: true,
   site: 'https://modules.lsposed.org',
 
   integrations: [
