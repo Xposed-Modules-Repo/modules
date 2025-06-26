@@ -27,6 +27,8 @@ const authors =
       name: a.name ? a.name : a.login,
     }
   }) || []
+
+const formatter = Intl.NumberFormat('en', { notation: 'compact' })
 ---
 
 <Layout title={module.description} description={module.summary}>
@@ -111,9 +113,11 @@ const authors =
               <ul>
                 {r.releaseAssets.map((a) => (
                   <li>
-                    <a class="link" href={a.downloadUrl}>
-                      {a.name}
-                    </a>
+                    <div class="tooltip" data-tip={formatter.format(a.downloadCount)}>
+                      <a class="link" href={a.downloadUrl}>
+                        {a.name}
+                      </a>
+                    </div>
                   </li>
                 ))}
               </ul>
