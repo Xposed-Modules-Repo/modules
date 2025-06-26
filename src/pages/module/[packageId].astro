@@ -29,6 +29,12 @@ const authors =
   }) || []
 
 const formatter = Intl.NumberFormat('en', { notation: 'compact' })
+const byteFormatter = Intl.NumberFormat("en", {
+  notation: "compact",
+  style: "unit",
+  unit: "byte",
+  unitDisplay: "narrow",
+})
 ---
 
 <Layout title={module.description} description={module.summary}>
@@ -117,6 +123,7 @@ const formatter = Intl.NumberFormat('en', { notation: 'compact' })
                       <a class="link" href={a.downloadUrl}>
                         {a.name}
                       </a>
+                      <span class="badge">{byteFormatter.format(a.size)}</span>
                     </div>
                   </li>
                 ))}
