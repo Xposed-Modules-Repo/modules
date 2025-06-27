@@ -657,8 +657,6 @@ const main = async () => {
       page++
     }
 
-    writeFileSync("./test.json", JSON.stringify(mergedRepositories))
-
     let modules: Array<ModuleJson> = []
     for (const m of mergedRepositories) {
       const module = await convert2json(m.node)
