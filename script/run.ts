@@ -477,7 +477,7 @@ const convert2json = async (
 ): Promise<ModuleJson | null> => {
   repo.latestRelease &&
     !repo.releases.edges.find((r) => {
-      r.node.tagName == repo.latestRelease?.tagName
+      return r.node.tagName == repo.latestRelease?.tagName
     }) &&
     repo.releases.edges.push({ node: repo.latestRelease })
   const releases: Array<ModuleRelease> = repo.releases.edges
