@@ -18,7 +18,7 @@ export default defineConfig({
     sitemap(),
     pagefind({
       indexConfig: {
-        forceLanguage: 'zh'
+        forceLanguage: 'en'
       }
     })
   ],
