@@ -7,7 +7,7 @@ import Search from "astro-pagefind/components/Search"
     <a class="btn btn-ghost text-xl" href="/">Xposed Module Repository</a>
   </div>
   <div class="flex-none">
-    <button class="btn btn-ghost btn-circle" onclick="searchDialog.showModal()">
+    <button class="btn btn-ghost btn-circle" id="searchButton">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         class="h-5 w-5"
@@ -36,3 +36,14 @@ import Search from "astro-pagefind/components/Search"
     <button>close</button>
   </form>
 </dialog>
+
+<script>
+  document.getElementById("searchButton")?.addEventListener("click", () => {
+    const dialog: HTMLDialogElement | null =
+      document.querySelector("#searchDialog")
+    dialog?.showModal()
+    setTimeout(() => {
+      document.querySelector("input")?.focus()
+    }, 100)
+  })
+</script>
