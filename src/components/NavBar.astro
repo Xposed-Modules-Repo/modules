@@ -47,3 +47,11 @@ import Search from "astro-pagefind/components/Search"
     }, 100)
   })
 </script>
+
+<style is:global>
+  .pagefind-ui__result p,
+  .pagefind-ui__result a,
+  .pagefind-ui__message {
+    color: var(--color-base-content) !important;
+  }
+</style>
