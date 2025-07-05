@@ -111,11 +111,13 @@ const byteFormatter = Intl.NumberFormat("en", {
               <p>Release type: {r.isPrerelease ? "Pre-release" : "Stable"}</p>
               <p>{new Date(r.publishedAt).toLocaleString()}</p>
               <div class="divider" />
-              <article
-                class="prose prose-img:inline prose-img:mt-0 prose-img:mb-0 prose-table:w-auto"
-                set:html={r.descriptionHTML}
-              />
-              <div class="divider" />
+              { r.descriptionHTML && 
+                <article
+                  class="prose prose-img:inline prose-img:mt-0 prose-img:mb-0 prose-table:w-auto"
+                  set:html={r.descriptionHTML}
+                />
+                <div class="divider" />
+              }
               <ul>
                 {r.releaseAssets.map((a) => (
                   <li>
