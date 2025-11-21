@@ -2,4 +2,5 @@
 @plugin "@tailwindcss/typography";
 @plugin "daisyui" {
     themes: light --default, dracula --prefersdark;
+    exclude: properties; /* https://github.com/saadeghi/daisyui/issues/3882 */
 }
