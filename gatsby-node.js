@@ -311,6 +311,7 @@ function parseRepositoryObject (repo) {
     repo.name !== 'org.meowcat.example' && repo.name !== '.github')
   if (repo.isModule) {
     for (const release of repo.releases.edges) {
+      if (!release.node.description) continue
       release.node.descriptionHTML = replacePrivateImage(release.node.description, release.node.descriptionHTML)
     }
     repo.latestRelease = repo.releases.edges.find(({ node: { isPrerelease } }) => !isPrerelease)
