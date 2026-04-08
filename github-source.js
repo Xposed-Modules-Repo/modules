@@ -65,9 +65,13 @@ const fetchFromGitHub = async (graphQLQuery) => {
 }
 
 const REGEX_PUBLIC_IMAGES = /https:\/\/github\.com\/[a-zA-Z0-9-]+\/[\w\-.]+\/assets\/\d+\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/g
+const REGEX_PUBLIC_IMAGES2 = /https:\/\/github\.com\/user-attachments\/assets\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/g
 const replacePrivateImage = (markdown, html) => {
   const publicMatches = new Map()
   for (const match of markdown.matchAll(REGEX_PUBLIC_IMAGES)) {
+    publicMatches.set(match[0], match[1])
+  }
+  for (const match of markdown.matchAll(REGEX_PUBLIC_IMAGES2)) {
     publicMatches.set(match[0], match[1])
   }
   for (const match of publicMatches) {
