@@ -18,7 +18,7 @@ import {
   replacePrivateImages,
   restoreMirroredImages
 } from './markdown'
-import { REPOSITORY_DETAIL_QUERY } from './queries'
+import { REPOSITORY_DETAIL_QUERY, repositoryDetailBatchQuery } from './queries'
 import type {
   Author,
   ModuleListItem,
@@ -108,6 +108,12 @@ interface RestRepoNode {
   default_branch?: string | null
 }
 
+interface HydrationTask {
+  repo: RepoNode
+  fingerprint: string
+  dataPath: string
+}
+
 export async function getSiteData (): Promise<SiteData> {
   siteDataPromise ||= buildSiteData()
   return siteDataPromise
@@ -139,10 +145,16 @@ async function buildSiteData (): Promise<SiteData> {
     if (!inventoryByName[cachedName]) delete manifest.repos[cachedName]
   }
 
-  const allModuleRecords: ModuleRecord[] = []
+  const recordsByName = new Map<string, ModuleRecord>()
+  const repoStates: HydrationTask[] = []
+  const hydrationTasks: HydrationTask[] = []
+
   for (const repo of inventory) {
     const fingerprint = fingerprintRepository(repo)
     const dataPath = repoDataPath(repo.name)
+    const state = { repo, fingerprint, dataPath }
+    repoStates.push(state)
+
     const cached = manifest.repos[repo.name]
     const forceHydrate = dirtyRepoSet.has(repo.name)
     let record: ModuleRecord | null = null
@@ -162,27 +174,29 @@ async function buildSiteData (): Promise<SiteData> {
 
     if (!record) {
       if (isPotentialModuleRepository(repo)) {
-        try {
-          record = await hydrateRepository(repo.name, fingerprint)
-        } catch (error) {
-          console.warn(`[hydrate] Skipping ${OWNER}/${repo.name}: ${(error as Error).message}`)
-          record = minimalRepositoryRecord(repo, fingerprint)
-        }
-      } else {
-        record = minimalRepositoryRecord(repo, fingerprint)
+        hydrationTasks.push(state)
+        continue
       }
+      record = minimalRepositoryRecord(repo, fingerprint)
       await writeJson(dataPath, record)
     }
 
+    recordsByName.set(repo.name, record)
+  }
+
+  await hydrateRepositories(hydrationTasks, recordsByName)
+
+  const allModuleRecords: ModuleRecord[] = []
+  for (const { repo, fingerprint, dataPath } of repoStates) {
+    const record = recordsByName.get(repo.name) || minimalRepositoryRecord(repo, fingerprint)
     manifest.repos[repo.name] = {
       fingerprint,
       dataPath,
       readmeOid: record.readmeOid
     }
-    await writeManifest(manifest)
-
     if (record.isModule) allModuleRecords.push(record)
   }
+  await writeManifest(manifest)
 
   allModuleRecords.sort(compareModules)
   const records = allModuleRecords.filter(record => !record.hide)
@@ -334,15 +348,97 @@ async function fetchRepositoryInventory (name: string): Promise<RepoNode | null>
   }
 }
 
-async function hydrateRepository (name: string, fingerprint: string): Promise<ModuleRecord> {
-  console.log(`[hydrate] Fetching ${OWNER}/${name}`)
-  const data = await githubGraphql<{ repository?: RepoNode | null }>(REPOSITORY_DETAIL_QUERY, {
-    owner: OWNER,
-    name
-  })
+async function hydrateRepositories (
+  tasks: HydrationTask[],
+  recordsByName: Map<string, ModuleRecord>
+): Promise<void> {
+  const batchSize = detailBatchSize()
+  for (const chunk of chunkArray(tasks, batchSize)) {
+    const names = chunk.map(task => task.repo.name)
+    console.log(`[hydrate] Fetching ${OWNER} detail batch, size=${names.length}`)
+    let details: Map<string, RepoNode | null>
+    try {
+      details = await fetchRepositoryDetails(names)
+    } catch (error) {
+      console.warn(`[hydrate] Detail batch failed: ${(error as Error).message}`)
+      details = new Map()
+    }
 
-  if (!data.repository) throw new Error(`Repository not found: ${OWNER}/${name}`)
-  return parseRepository(data.repository, fingerprint)
+    for (const task of chunk) {
+      let record: ModuleRecord
+      try {
+        const detail = details.get(task.repo.name)
+        if (!detail) throw new Error(`Repository not found: ${OWNER}/${task.repo.name}`)
+        record = await parseRepository(detail, task.fingerprint)
+      } catch (error) {
+        console.warn(`[hydrate] Skipping ${OWNER}/${task.repo.name}: ${(error as Error).message}`)
+        record = minimalRepositoryRecord(task.repo, task.fingerprint)
+      }
+
+      recordsByName.set(task.repo.name, record)
+      await writeJson(task.dataPath, record)
+    }
+  }
+}
+
+async function fetchRepositoryDetails (names: string[]): Promise<Map<string, RepoNode | null>> {
+  const details = new Map<string, RepoNode | null>()
+  if (!names.length) return details
+
+  if (names.length === 1) {
+    const data = await githubGraphql<{ repository?: RepoNode | null }>(REPOSITORY_DETAIL_QUERY, {
+      owner: OWNER,
+      name: names[0]
+    })
+    details.set(names[0], data.repository || null)
+    return details
+  }
+
+  try {
+    const variables: Record<string, unknown> = { owner: OWNER }
+    names.forEach((name, index) => {
+      variables[`name${index}`] = name
+    })
+
+    const data = await githubGraphql<Record<string, RepoNode | null>>(
+      repositoryDetailBatchQuery(names.length),
+      variables
+    )
+
+    names.forEach((name, index) => {
+      details.set(name, data[`repo${index}`] || null)
+    })
+    return details
+  } catch (error) {
+    const midpoint = Math.ceil(names.length / 2)
+    console.warn(`[hydrate] Splitting failed detail batch of ${names.length}: ${(error as Error).message}`)
+
+    for (const segment of [names.slice(0, midpoint), names.slice(midpoint)]) {
+      try {
+        for (const [name, repo] of await fetchRepositoryDetails(segment)) {
+          details.set(name, repo)
+        }
+      } catch (segmentError) {
+        console.warn(`[hydrate] Detail segment failed: ${(segmentError as Error).message}`)
+        for (const name of segment) details.set(name, null)
+      }
+    }
+    return details
+  }
+}
+
+function detailBatchSize (): number {
+  const value = Number.parseInt(process.env.GITHUB_DETAIL_BATCH_SIZE || '10', 10)
+  if (!Number.isFinite(value)) return 10
+  return Math.max(1, Math.min(20, value))
+}
+
+function chunkArray<T> (items: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size))
+  }
+  return chunks
 }
 
 async function parseRepository (repo: RepoNode, fingerprint: string): Promise<ModuleRecord> {

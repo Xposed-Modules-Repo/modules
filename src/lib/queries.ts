@@ -95,66 +95,87 @@ query RepositoryInventoryByName($owner: String!, $name: String!) {
 }
 `
 
-export const REPOSITORY_DETAIL_QUERY = `
-query RepositoryDetail($owner: String!, $name: String!) {
-  repository(owner: $owner, name: $name) {
+export const REPOSITORY_DETAIL_FRAGMENT = `
+fragment RepositoryDetail on Repository {
+  name
+  description
+  url
+  homepageUrl
+  updatedAt
+  createdAt
+  pushedAt
+  stargazerCount
+  defaultBranchRef {
     name
-    description
-    url
-    homepageUrl
-    updatedAt
-    createdAt
-    pushedAt
-    stargazerCount
-    defaultBranchRef {
+    target {
+      oid
+    }
+  }
+  collaborators(affiliation: DIRECT, first: 100) {
+    nodes {
+      login
       name
-      target {
-        oid
-      }
     }
-    collaborators(affiliation: DIRECT, first: 100) {
+  }
+  readme: object(expression: "HEAD:README.md") {
+    ... on Blob {
+      oid
+      text
+    }
+  }
+  summary: object(expression: "HEAD:SUMMARY") {
+    ... on Blob {
+      oid
+      text
+    }
+  }
+  scope: object(expression: "HEAD:SCOPE") {
+    ... on Blob {
+      oid
+      text
+    }
+  }
+  sourceUrl: object(expression: "HEAD:SOURCE_URL") {
+    ... on Blob {
+      oid
+      text
+    }
+  }
+  hide: object(expression: "HEAD:HIDE") {
+    ... on Blob {
+      oid
+      text
+    }
+  }
+  additionalAuthors: object(expression: "HEAD:ADDITIONAL_AUTHORS") {
+    ... on Blob {
+      oid
+      text
+    }
+  }
+  latestRelease {
+    name
+    url
+    isDraft
+    description
+    descriptionHTML
+    createdAt
+    publishedAt
+    updatedAt
+    tagName
+    isPrerelease
+    releaseAssets(first: 50) {
       nodes {
-        login
         name
+        contentType
+        downloadUrl
+        downloadCount
+        size
       }
     }
-    readme: object(expression: "HEAD:README.md") {
-      ... on Blob {
-        oid
-        text
-      }
-    }
-    summary: object(expression: "HEAD:SUMMARY") {
-      ... on Blob {
-        oid
-        text
-      }
-    }
-    scope: object(expression: "HEAD:SCOPE") {
-      ... on Blob {
-        oid
-        text
-      }
-    }
-    sourceUrl: object(expression: "HEAD:SOURCE_URL") {
-      ... on Blob {
-        oid
-        text
-      }
-    }
-    hide: object(expression: "HEAD:HIDE") {
-      ... on Blob {
-        oid
-        text
-      }
-    }
-    additionalAuthors: object(expression: "HEAD:ADDITIONAL_AUTHORS") {
-      ... on Blob {
-        oid
-        text
-      }
-    }
-    latestRelease {
+  }
+  releases(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
+    nodes {
       name
       url
       isDraft
@@ -165,6 +186,7 @@ query RepositoryDetail($owner: String!, $name: String!) {
       updatedAt
       tagName
       isPrerelease
+      isLatest
       releaseAssets(first: 50) {
         nodes {
           name
@@ -175,30 +197,31 @@ query RepositoryDetail($owner: String!, $name: String!) {
         }
       }
     }
-    releases(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
-      nodes {
-        name
-        url
-        isDraft
-        description
-        descriptionHTML
-        createdAt
-        publishedAt
-        updatedAt
-        tagName
-        isPrerelease
-        isLatest
-        releaseAssets(first: 50) {
-          nodes {
-            name
-            contentType
-            downloadUrl
-            downloadCount
-            size
-          }
-        }
-      }
-    }
   }
 }
 `
+
+export const REPOSITORY_DETAIL_QUERY = `
+${REPOSITORY_DETAIL_FRAGMENT}
+
+query RepositoryDetail($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    ...RepositoryDetail
+  }
+}
+`
+
+export function repositoryDetailBatchQuery (count: number): string {
+  const variables = Array.from({ length: count }, (_, index) => `$name${index}: String!`).join(', ')
+  const repositories = Array.from({ length: count }, (_, index) => {
+    return `  repo${index}: repository(owner: $owner, name: $name${index}) {\n    ...RepositoryDetail\n  }`
+  }).join('\n')
+
+  return `
+${REPOSITORY_DETAIL_FRAGMENT}
+
+query RepositoryDetailBatch($owner: String!, ${variables}) {
+${repositories}
+}
+`
+}
