@@ -4,5 +4,6 @@ dist/
 .cache/
 .env
 .env.*
+!.env.example
 public/github-assets/
 npm-debug.log*
