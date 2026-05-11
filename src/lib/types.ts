@@ -73,6 +73,8 @@ export interface ModuleListItem {
   url: string
   homepageUrl?: string | null
   sourceUrl?: string | null
+  updatedAt: string
+  stargazerCount?: number
   latestRelease?: string
   latestBetaRelease?: string
   latestSnapshotRelease?: string

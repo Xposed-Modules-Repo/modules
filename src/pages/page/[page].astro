@@ -1,6 +1,6 @@
 ---
 import Layout from '../../components/Layout.astro'
-import ModuleGrid from '../../components/ModuleGrid.astro'
+import ModuleList from '../../components/ModuleList'
 import Pagination from '../../components/Pagination.astro'
 import AdSlot from '../../components/AdSlot.astro'
 import { getSiteData } from '../../lib/modules'
@@ -29,6 +29,6 @@ const modules = data.listItems.slice(start, start + data.pageSize)
     </div>
   </section>
   <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_TOP} />
-  <ModuleGrid modules={modules} />
+  <ModuleList modules={modules} totalCount={modules.length} client:load />
   <Pagination current={current} pageCount={pageCount} />
 </Layout>

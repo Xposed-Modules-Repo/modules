@@ -754,6 +754,8 @@ function toListItem (module: ModuleRecord): ModuleListItem {
     url: module.url,
     homepageUrl: module.homepageUrl,
     sourceUrl: module.sourceUrl || module.url,
+    updatedAt: module.updatedAt,
+    stargazerCount: module.stargazerCount,
     latestRelease: module.latestRelease?.tagName,
     latestBetaRelease: module.latestBetaRelease?.tagName !== module.latestRelease?.tagName
       ? module.latestBetaRelease?.tagName

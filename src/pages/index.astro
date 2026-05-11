@@ -1,13 +1,12 @@
 ---
 import Layout from '../components/Layout.astro'
-import ModuleGrid from '../components/ModuleGrid.astro'
-import Pagination from '../components/Pagination.astro'
+import ModuleList from '../components/ModuleList'
 import AdSlot from '../components/AdSlot.astro'
 import { getSiteData } from '../lib/modules'
 
 const data = await getSiteData()
-const modules = data.listItems.slice(0, data.pageSize)
 const pageCount = Math.ceil(data.listItems.length / data.pageSize)
+const modules = data.listItems.slice(0, data.pageSize)
 ---
 
 <Layout title="Xposed Module Repository">
@@ -19,6 +18,16 @@ const pageCount = Math.ceil(data.listItems.length / data.pageSize)
     <a class="btn btn-primary" href="/submission/">Submit Module</a>
   </section>
   <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_TOP} />
-  <ModuleGrid modules={modules} />
-  <Pagination current={1} pageCount={pageCount} />
+  <ModuleList
+    modules={modules}
+    totalCount={data.listItems.length}
+    nextPage={pageCount > 1 ? 2 : undefined}
+    pageUrlTemplate="/module-list/{page}.json"
+    client:load
+  />
+  {pageCount > 1 && (
+    <noscript>
+      <p class="module-list-noscript"><a href="/page/2/">Browse more modules</a></p>
+    </noscript>
+  )}
 </Layout>
