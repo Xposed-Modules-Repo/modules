@@ -8,7 +8,7 @@ class_name = "WebhookDebouncer"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["WebhookDebouncer"]
+new_sqlite_classes = ["WebhookDebouncer"]
 
 [vars]
 GITHUB_OWNER = "Xposed-Modules-Repo"

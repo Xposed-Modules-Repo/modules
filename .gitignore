@@ -6,4 +6,5 @@ dist/
 .env.*
 !.env.example
 public/github-assets/
+wrangler.toml
 npm-debug.log*
