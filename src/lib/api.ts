@@ -6,10 +6,42 @@ export function moduleJson (module: ModuleRecord): Record<string, unknown> {
     isModule,
     defaultBranchOid,
     readmeOid,
+    latestRelease,
+    latestBetaRelease,
+    latestSnapshotRelease,
     ...publicModule
   } = module
 
-  return publicModule
+  return {
+    ...publicModule,
+    collaborators: module.collaborators.map(author => ({
+      login: author.login,
+      name: author.name ?? null
+    })),
+    additionalAuthors: module.additionalAuthors
+      ? module.additionalAuthors.map(author => ({
+          type: author.type ?? null,
+          name: author.name ?? null,
+          link: author.link ?? null
+        }))
+      : null,
+    latestRelease: latestRelease?.tagName,
+    latestBetaRelease: latestBetaRelease && latestBetaRelease.tagName !== latestRelease?.tagName
+      ? latestBetaRelease.tagName
+      : undefined,
+    latestSnapshotRelease: latestSnapshotRelease &&
+      latestSnapshotRelease.tagName !== latestRelease?.tagName &&
+      latestSnapshotRelease.tagName !== latestBetaRelease?.tagName
+      ? latestSnapshotRelease.tagName
+      : undefined,
+    childGitHubReadme: module.readmeHTML
+      ? {
+          childMarkdownRemark: {
+            html: module.readmeHTML
+          }
+        }
+      : null
+  }
 }
 
 export function modulesJson (modules: ModuleRecord[]): Array<Record<string, unknown>> {
@@ -40,7 +72,8 @@ export function modulesJson (modules: ModuleRecord[]): Array<Record<string, unkn
         ? [latestSnapshotRelease]
         : undefined,
       readme: undefined,
-      readmeHTML: undefined
+      readmeHTML: undefined,
+      childGitHubReadme: undefined
     }
   })
 }

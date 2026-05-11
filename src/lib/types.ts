@@ -1,7 +1,7 @@
 export interface Author {
-  type?: string
-  name?: string
-  link?: string
+  type?: string | null
+  name?: string | null
+  link?: string | null
 }
 
 export interface Collaborator {

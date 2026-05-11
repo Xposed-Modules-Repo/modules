@@ -715,7 +715,11 @@ function parseAdditionalAuthors (text?: string | null): Author[] | null {
       .filter(value => value && typeof value === 'object')
       .map(value => {
         const source = value as Record<string, unknown>
-        const author: Author = {}
+        const author: Author = {
+          type: null,
+          name: null,
+          link: null
+        }
         for (const key of ['type', 'name', 'link'] as const) {
           if (typeof source[key] === 'string') author[key] = source[key] as string
         }
