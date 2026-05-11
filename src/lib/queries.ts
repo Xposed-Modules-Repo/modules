@@ -59,35 +59,6 @@ fragment RepositoryInventory on Repository {
     updatedAt
     tagName
     isPrerelease
-    releaseAssets(first: 50) {
-      nodes {
-        name
-        contentType
-        downloadUrl
-        size
-      }
-    }
-  }
-  releases(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
-    nodes {
-      name
-      url
-      isDraft
-      createdAt
-      publishedAt
-      updatedAt
-      tagName
-      isPrerelease
-      isLatest
-      releaseAssets(first: 50) {
-        nodes {
-          name
-          contentType
-          downloadUrl
-          size
-        }
-      }
-    }
   }
 }
 `
@@ -95,9 +66,9 @@ fragment RepositoryInventory on Repository {
 export const ORGANIZATION_INVENTORY_QUERY = `
 ${REPOSITORY_INVENTORY_FRAGMENT}
 
-query OrganizationInventory($owner: String!, $cursor: String) {
+query OrganizationInventory($owner: String!, $cursor: String, $pageSize: Int!) {
   organization(login: $owner) {
-    repositories(first: 50, after: $cursor, orderBy: {field: UPDATED_AT, direction: DESC}, privacy: PUBLIC) {
+    repositories(first: $pageSize, after: $cursor, orderBy: {field: UPDATED_AT, direction: DESC}, privacy: PUBLIC) {
       edges {
         cursor
         node {

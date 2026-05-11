@@ -10,13 +10,15 @@ import {
   writeJson,
   writeManifest
 } from './cache'
-import { githubGraphql } from './github'
-import { renderReadmeHtml, replacePrivateImages, restoreMirroredImages } from './markdown'
+import { githubGraphql, githubRestJson } from './github'
 import {
-  ORGANIZATION_INVENTORY_QUERY,
-  REPOSITORY_DETAIL_QUERY,
-  REPOSITORY_INVENTORY_QUERY
-} from './queries'
+  README_ASSET_VERSION,
+  refreshReadmeImageAssets,
+  renderReadmeHtml,
+  replacePrivateImages,
+  restoreMirroredImages
+} from './markdown'
+import { REPOSITORY_DETAIL_QUERY } from './queries'
 import type {
   Author,
   ModuleListItem,
@@ -94,13 +96,16 @@ interface RepoNode {
   } | null
 }
 
-interface OrganizationInventoryData {
-  organization?: {
-    repositories?: {
-      edges?: Array<{ cursor: string, node: RepoNode }>
-      pageInfo?: { hasNextPage: boolean, endCursor?: string | null }
-    }
-  }
+interface RestRepoNode {
+  name: string
+  description?: string | null
+  html_url: string
+  homepage?: string | null
+  updated_at: string
+  created_at: string
+  pushed_at?: string | null
+  stargazers_count?: number
+  default_branch?: string | null
 }
 
 export async function getSiteData (): Promise<SiteData> {
@@ -124,7 +129,9 @@ async function buildSiteData (): Promise<SiteData> {
   await ensureDir(cacheRoot)
 
   const manifest = await readManifest(OWNER)
-  const inventory = await loadInventory(manifest.inventory as Record<string, RepoNode>)
+  const dirtyRepos = await dirtyRepoNames()
+  const dirtyRepoSet = new Set(dirtyRepos)
+  const inventory = await loadInventory(manifest.inventory as Record<string, RepoNode>, dirtyRepos)
   const inventoryByName = Object.fromEntries(inventory.map(repo => [repo.name, repo]))
 
   manifest.inventory = inventoryByName
@@ -137,15 +144,33 @@ async function buildSiteData (): Promise<SiteData> {
     const fingerprint = fingerprintRepository(repo)
     const dataPath = repoDataPath(repo.name)
     const cached = manifest.repos[repo.name]
+    const forceHydrate = dirtyRepoSet.has(repo.name)
     let record: ModuleRecord | null = null
 
-    if (cached?.fingerprint === fingerprint && await pathExists(dataPath)) {
+    if (!forceHydrate && cached?.fingerprint === fingerprint && await pathExists(dataPath)) {
       record = await readJson<ModuleRecord>(dataPath)
-      if (record?.readmeHTML) await restoreMirroredImages(record.readmeHTML)
+      if (record) await restoreCachedReadmeAssets(record, dataPath)
+    }
+
+    if (!forceHydrate && !record && await pathExists(dataPath)) {
+      const existing = await readJson<ModuleRecord>(dataPath)
+      if (existing?.fingerprint === fingerprint) {
+        record = existing
+        await restoreCachedReadmeAssets(record, dataPath)
+      }
     }
 
     if (!record) {
-      record = await hydrateRepository(repo.name, fingerprint)
+      if (isPotentialModuleRepository(repo)) {
+        try {
+          record = await hydrateRepository(repo.name, fingerprint)
+        } catch (error) {
+          console.warn(`[hydrate] Skipping ${OWNER}/${repo.name}: ${(error as Error).message}`)
+          record = minimalRepositoryRecord(repo, fingerprint)
+        }
+      } else {
+        record = minimalRepositoryRecord(repo, fingerprint)
+      }
       await writeJson(dataPath, record)
     }
 
@@ -154,13 +179,13 @@ async function buildSiteData (): Promise<SiteData> {
       dataPath,
       readmeOid: record.readmeOid
     }
+    await writeManifest(manifest)
 
     if (record.isModule) allModuleRecords.push(record)
   }
 
   allModuleRecords.sort(compareModules)
   const records = allModuleRecords.filter(record => !record.hide)
-  await writeManifest(manifest)
 
   const listItems = records.map(toListItem)
   return {
@@ -182,6 +207,7 @@ function sampleSiteData (): SiteData {
     readme: '# Example Module\n\nThis page is generated from sample data.',
     readmeOid: 'sample-readme',
     readmeHTML: '<h1>Example Module</h1><p>This page is generated from sample data.</p>',
+    readmeAssetVersion: README_ASSET_VERSION,
     summary: 'This page is generated from sample data.',
     sourceUrl: 'https://github.com/Xposed-Modules-Repo/com.example.module',
     hide: false,
@@ -233,8 +259,7 @@ function sampleSiteData (): SiteData {
   }
 }
 
-async function loadInventory (cachedInventory: Record<string, RepoNode>): Promise<RepoNode[]> {
-  const dirtyRepos = await dirtyRepoNames()
+async function loadInventory (cachedInventory: Record<string, RepoNode>, dirtyRepos: string[]): Promise<RepoNode[]> {
   if (dirtyRepos.length && Object.keys(cachedInventory).length) {
     const next = new Map(Object.entries(cachedInventory))
     for (const name of dirtyRepos) {
@@ -281,18 +306,17 @@ async function dirtyRepoNames (): Promise<string[]> {
 
 async function fetchOrganizationInventory (): Promise<RepoNode[]> {
   const repos: RepoNode[] = []
-  let cursor: string | null = null
+  let hasNextPage = true
   let page = 1
+  const pageSize = Math.max(1, Math.min(100, Number.parseInt(process.env.GITHUB_INVENTORY_PAGE_SIZE || '100', 10)))
 
-  while (true) {
+  while (hasNextPage) {
     console.log(`[inventory] Querying ${OWNER}, page ${page}`)
-    const data: OrganizationInventoryData = await githubGraphql<OrganizationInventoryData>(ORGANIZATION_INVENTORY_QUERY, { owner: OWNER, cursor })
+    const url = `https://api.github.com/orgs/${encodeURIComponent(OWNER)}/repos?type=public&sort=updated&direction=desc&per_page=${pageSize}&page=${page}`
+    const { data, link } = await githubRestJson<RestRepoNode[]>(url)
 
-    const connection = data.organization?.repositories
-    repos.push(...(connection?.edges || []).map((edge: { cursor: string, node: RepoNode }) => edge.node))
-
-    if (!connection?.pageInfo?.hasNextPage) break
-    cursor = connection.pageInfo.endCursor || null
+    repos.push(...data.map(restRepoToRepoNode))
+    hasNextPage = Boolean(link?.includes('rel="next"')) && data.length > 0
     page++
   }
 
@@ -300,11 +324,14 @@ async function fetchOrganizationInventory (): Promise<RepoNode[]> {
 }
 
 async function fetchRepositoryInventory (name: string): Promise<RepoNode | null> {
-  const data = await githubGraphql<{ repository?: RepoNode | null }>(REPOSITORY_INVENTORY_QUERY, {
-    owner: OWNER,
-    name
-  })
-  return data.repository || null
+  const url = `https://api.github.com/repos/${encodeURIComponent(OWNER)}/${encodeURIComponent(name)}`
+  try {
+    const { data } = await githubRestJson<RestRepoNode>(url)
+    return restRepoToRepoNode(data)
+  } catch (error) {
+    if ((error as Error).message.includes(': 404 ')) return null
+    throw error
+  }
 }
 
 async function hydrateRepository (name: string, fingerprint: string): Promise<ModuleRecord> {
@@ -371,6 +398,7 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
       record.readmeOid,
       record.defaultBranchOid || 'HEAD'
     )
+    record.readmeAssetVersion = README_ASSET_VERSION
   }
 
   console.log(`[repo] ${repo.name}, module=${record.isModule}`)
@@ -414,6 +442,89 @@ function toReleaseAsset (asset: AssetNode): ReleaseAsset {
     downloadCount: asset.downloadCount,
     size: asset.size
   }
+}
+
+function restRepoToRepoNode (repo: RestRepoNode): RepoNode {
+  return {
+    name: repo.name,
+    description: repo.description,
+    url: repo.html_url,
+    homepageUrl: repo.homepage,
+    updatedAt: repo.updated_at,
+    createdAt: repo.created_at,
+    pushedAt: repo.pushed_at,
+    stargazerCount: repo.stargazers_count,
+    defaultBranchRef: repo.default_branch
+      ? {
+          name: repo.default_branch,
+          target: null
+        }
+      : null
+  }
+}
+
+function isPotentialModuleRepository (repo: RepoNode): boolean {
+  return Boolean(
+    repo.name.match(/\./) &&
+    repo.description &&
+    repo.name !== 'org.meowcat.example' &&
+    repo.name !== '.github'
+  )
+}
+
+function minimalRepositoryRecord (repo: RepoNode, fingerprint: string): ModuleRecord {
+  return {
+    name: repo.name,
+    description: repo.description,
+    url: repo.url,
+    homepageUrl: repo.homepageUrl,
+    collaborators: [],
+    readme: null,
+    readmeOid: null,
+    readmeHTML: null,
+    summary: null,
+    sourceUrl: null,
+    hide: false,
+    additionalAuthors: null,
+    scope: null,
+    releases: [],
+    latestReleaseTime: '1970-01-01T00:00:00Z',
+    latestBetaReleaseTime: '1970-01-01T00:00:00Z',
+    latestSnapshotReleaseTime: '1970-01-01T00:00:00Z',
+    updatedAt: repo.updatedAt,
+    createdAt: repo.createdAt,
+    pushedAt: repo.pushedAt,
+    stargazerCount: repo.stargazerCount,
+    defaultBranch: repo.defaultBranchRef?.name,
+    defaultBranchOid: repo.defaultBranchRef?.target?.oid,
+    fingerprint,
+    isModule: false
+  }
+}
+
+async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string): Promise<void> {
+  if (!record.readmeHTML) return
+
+  await restoreMirroredImages(record.readmeHTML)
+  if (
+    record.readmeAssetVersion === README_ASSET_VERSION ||
+    !record.readme ||
+    !record.readmeHTML.includes('\\')
+  ) {
+    return
+  }
+
+  const refreshedHtml = await refreshReadmeImageAssets(
+    OWNER,
+    record.name,
+    record.readme,
+    record.readmeHTML,
+    record.defaultBranchOid || 'HEAD'
+  )
+
+  record.readmeHTML = refreshedHtml
+  record.readmeAssetVersion = README_ASSET_VERSION
+  await writeJson(dataPath, record)
 }
 
 function assignLatestReleases (record: ModuleRecord): void {

@@ -16,6 +16,8 @@ import {
 } from './cache'
 import { githubBuffer, renderGithubMarkdown } from './github'
 
+export const README_ASSET_VERSION = 2
+
 const PUBLIC_IMAGE_PATTERNS = [
   /https:\/\/github\.com\/[a-zA-Z0-9-]+\/[\w.-]+\/assets\/\d+\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/g,
   /https:\/\/github\.com\/user-attachments\/assets\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/g
@@ -48,7 +50,10 @@ export async function renderReadmeHtml (
 ): Promise<string> {
   const htmlPath = renderedReadmePath(repoName, readmeOid)
   if (await pathExists(htmlPath)) {
-    return fs.readFile(htmlPath, 'utf8')
+    const cachedHtml = await fs.readFile(htmlPath, 'utf8')
+    const refreshedHtml = await mirrorRelativeImages(owner, repoName, markdown, cachedHtml, commitOid)
+    if (refreshedHtml !== cachedHtml) await fs.writeFile(htmlPath, refreshedHtml, 'utf8')
+    return refreshedHtml
   }
 
   let html = await renderMarkdown(owner, repoName, markdown)
@@ -181,7 +186,24 @@ async function mirrorRelativeImages (
     }
   })
 
+  $('a').each((_, element) => {
+    const href = $(element).attr('href')
+    if (!href) return
+    const rewritten = resolveHtmlImageUrl(href, owner, repoName, publicUrls)
+    if (rewritten) $(element).attr('href', rewritten)
+  })
+
   return $.root().html() || html
+}
+
+export async function refreshReadmeImageAssets (
+  owner: string,
+  repoName: string,
+  markdown: string,
+  html: string,
+  commitOid: string
+): Promise<string> {
+  return mirrorRelativeImages(owner, repoName, markdown, html, commitOid)
 }
 
 function extractRelativeMarkdownImages (markdown: string): Set<string> {
@@ -226,6 +248,7 @@ function resolveRelativeAsset (value: string): string | null {
     decoded = withoutSuffix
   }
 
+  decoded = decoded.replace(/\\/g, '/')
   const normalized = path.posix.normalize(decoded.startsWith('/') ? decoded.slice(1) : decoded)
   if (!normalized || normalized === '.' || normalized.startsWith('../') || path.posix.isAbsolute(normalized)) {
     return null
@@ -263,7 +286,7 @@ function resolveHtmlImageUrl (
   let pathname: string
   try {
     const url = new URL(current)
-    pathname = decodeURIComponent(url.pathname)
+    pathname = decodeURIComponent(url.pathname).replace(/\\/g, '/')
   } catch {
     return null
   }

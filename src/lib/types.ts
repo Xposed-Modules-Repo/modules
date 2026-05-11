@@ -42,6 +42,7 @@ export interface ModuleRecord {
   collaborators: Collaborator[]
   readme?: string | null
   readmeHTML?: string | null
+  readmeAssetVersion?: number
   readmeOid?: string | null
   summary?: string | null
   sourceUrl?: string | null
