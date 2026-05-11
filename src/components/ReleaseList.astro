@@ -33,13 +33,21 @@ function sizeLabel (bytes: number): string {
         {release.publishedAt && <p class="color-fg-muted">{new Date(release.publishedAt).toLocaleString()}</p>}
         {release.descriptionHTML && <div class="markdown-body" set:html={release.descriptionHTML} />}
         {release.releaseAssets.length > 0 && (
-          <div class="release-downloads">
-            <h3 class="release-downloads-title">Downloads</h3>
-            <ul class="download-list">
+          <div class="release-assets">
+            <div class="release-assets-heading">
+              <h3>Assets</h3>
+              <span class="release-assets-count">{release.releaseAssets.length}</span>
+            </div>
+            <ul class="release-assets-list">
               {release.releaseAssets.map(asset => (
-                <li class="download-item">
-                  <a class="download-link" href={asset.downloadUrl} target="_blank" rel="noreferrer">{asset.name}</a>
-                  <span class="download-meta">{sizeLabel(asset.size)}{typeof asset.downloadCount === 'number' ? ` · ${asset.downloadCount} downloads` : ''}</span>
+                <li class="release-asset-row">
+                  <span class="release-asset-icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" width="16" height="16">
+                      <path fill="currentColor" d="M8.878.392a1.75 1.75 0 0 0-1.756 0L2.12 3.284A1.75 1.75 0 0 0 1.25 4.8v5.937c0 .625.334 1.203.878 1.514l5 2.857a1.75 1.75 0 0 0 1.744 0l5-2.857a1.75 1.75 0 0 0 .878-1.514V4.8c0-.625-.334-1.203-.878-1.514ZM7.875 1.69a.25.25 0 0 1 .25 0l4.63 2.674L8 7.106 3.245 4.364Zm.875 12.058V8.405l4.5-2.598v4.93a.25.25 0 0 1-.126.217Zm-1.5 0-4.374-2.794a.25.25 0 0 1-.126-.217v-4.93l4.5 2.598Z"/>
+                    </svg>
+                  </span>
+                  <a class="release-asset-name" href={asset.downloadUrl} target="_blank" rel="noreferrer">{asset.name}</a>
+                  <span class="release-asset-meta">{sizeLabel(asset.size)}{typeof asset.downloadCount === 'number' ? ` · ${asset.downloadCount} downloads` : ''}</span>
                 </li>
               ))}
             </ul>

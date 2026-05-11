@@ -200,44 +200,75 @@ a {
   font-size: 20px;
 }
 
-.release-downloads {
-  margin-top: 16px;
-  padding-top: 12px;
+.release-assets {
+  margin: 20px -20px -20px;
+  padding: 16px 20px 20px;
   border-top: 1px solid var(--color-border-muted);
 }
 
-.release-downloads-title {
-  margin: 0 0 8px;
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
+.release-assets-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-.download-list {
-  display: grid;
-  gap: 6px;
+.release-assets-heading h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.release-assets-count {
+  display: inline-flex;
+  min-width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-neutral-muted);
+  color: var(--color-fg-default);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.release-assets-list {
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
   list-style: none;
 }
 
-.download-item {
-  display: flex;
+.release-asset-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
   min-width: 0;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  align-items: baseline;
-  line-height: 1.45;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-muted);
 }
 
-.download-link {
+.release-asset-row:first-child {
+  border-top: 0;
+}
+
+.release-asset-icon {
+  display: inline-flex;
+  color: var(--color-fg-muted);
+}
+
+.release-asset-name {
   min-width: 0;
   overflow-wrap: anywhere;
   font-weight: 500;
 }
 
-.download-meta {
+.release-asset-meta {
   color: var(--color-fg-muted);
   font-size: 13px;
   white-space: nowrap;
@@ -378,5 +409,14 @@ a {
 
   .page-heading {
     display: block;
+  }
+
+  .release-asset-row {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+
+  .release-asset-meta {
+    grid-column: 2;
+    white-space: normal;
   }
 }
