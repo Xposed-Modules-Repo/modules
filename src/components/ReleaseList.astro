@@ -33,17 +33,17 @@ function sizeLabel (bytes: number): string {
         {release.publishedAt && <p class="color-fg-muted">{new Date(release.publishedAt).toLocaleString()}</p>}
         {release.descriptionHTML && <div class="markdown-body" set:html={release.descriptionHTML} />}
         {release.releaseAssets.length > 0 && (
-          <>
-            <h3>Downloads</h3>
+          <div class="release-downloads">
+            <h3 class="release-downloads-title">Downloads</h3>
             <ul class="download-list">
               {release.releaseAssets.map(asset => (
-                <li>
-                  <a href={asset.downloadUrl} target="_blank" rel="noreferrer">{asset.name}</a>
-                  <span class="color-fg-muted"> · {sizeLabel(asset.size)}{typeof asset.downloadCount === 'number' ? ` · ${asset.downloadCount} downloads` : ''}</span>
+                <li class="download-item">
+                  <a class="download-link" href={asset.downloadUrl} target="_blank" rel="noreferrer">{asset.name}</a>
+                  <span class="download-meta">{sizeLabel(asset.size)}{typeof asset.downloadCount === 'number' ? ` · ${asset.downloadCount} downloads` : ''}</span>
                 </li>
               ))}
             </ul>
-          </>
+          </div>
         )}
       </article>
     ))}
