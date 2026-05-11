@@ -8,7 +8,7 @@ import remarkParse from 'remark-parse'
 import { visit } from 'unist-util-visit'
 import {
   assetCachePath,
-  assetOutputPath,
+  assetOutputPaths,
   assetPublicUrl,
   ensureDir,
   pathExists,
@@ -87,11 +87,13 @@ export async function restoreMirroredImages (html: string): Promise<void> {
 
     const assetPath = assetParts.join('/')
     const cacheFile = assetCachePath(owner, repoName, commitOid, assetPath)
-    const outputFile = assetOutputPath(owner, repoName, commitOid, assetPath)
+    if (!await pathExists(cacheFile)) continue
 
-    if (await pathExists(cacheFile) && !await pathExists(outputFile)) {
-      await ensureDir(path.dirname(outputFile))
-      await fs.copyFile(cacheFile, outputFile)
+    for (const outputFile of assetOutputPaths(owner, repoName, commitOid, assetPath)) {
+      if (!await pathExists(outputFile)) {
+        await ensureDir(path.dirname(outputFile))
+        await fs.copyFile(cacheFile, outputFile)
+      }
     }
   }
 }
@@ -259,7 +261,6 @@ function resolveRelativeAsset (value: string): string | null {
 
 async function mirrorAsset (owner: string, repoName: string, commitOid: string, assetPath: string): Promise<void> {
   const cacheFile = assetCachePath(owner, repoName, commitOid, assetPath)
-  const outputFile = assetOutputPath(owner, repoName, commitOid, assetPath)
 
   if (!await pathExists(cacheFile)) {
     const rawUrl = `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/${encodeURIComponent(commitOid)}/${assetPath.split('/').map(encodeURIComponent).join('/')}`
@@ -268,9 +269,11 @@ async function mirrorAsset (owner: string, repoName: string, commitOid: string, 
     await fs.writeFile(cacheFile, body)
   }
 
-  if (!await pathExists(outputFile)) {
-    await ensureDir(path.dirname(outputFile))
-    await fs.copyFile(cacheFile, outputFile)
+  for (const outputFile of assetOutputPaths(owner, repoName, commitOid, assetPath)) {
+    if (!await pathExists(outputFile)) {
+      await ensureDir(path.dirname(outputFile))
+      await fs.copyFile(cacheFile, outputFile)
+    }
   }
 }
 
