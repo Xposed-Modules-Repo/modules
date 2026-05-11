@@ -1,0 +1,26 @@
+---
+import type { ModuleListItem } from '../lib/types'
+
+interface Props {
+  module: ModuleListItem
+}
+
+const { module } = Astro.props
+const summary = module.summary || module.description || module.name
+---
+
+<article class="module-card">
+  <a class="module-card-main" href={`/module/${module.name}/`}>
+    <h2 class="module-card-title">{module.description || module.name}</h2>
+    <p class="module-card-summary">{summary}</p>
+    <div>
+      {module.latestRelease && <span class="Label Label--success mr-1">{module.latestRelease}</span>}
+      {module.latestBetaRelease && <span class="Label Label--attention mr-1">{module.latestBetaRelease}</span>}
+      {module.latestSnapshotRelease && <span class="Label Label--secondary">{module.latestSnapshotRelease}</span>}
+    </div>
+  </a>
+  <div class="module-card-actions">
+    {module.homepageUrl && <a class="btn btn-sm" href={module.homepageUrl} target="_blank" rel="noreferrer">Website</a>}
+    {module.sourceUrl && <a class="btn btn-sm" href={module.sourceUrl} target="_blank" rel="noreferrer">Source</a>}
+  </div>
+</article>

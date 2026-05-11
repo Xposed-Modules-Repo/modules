@@ -1,0 +1,21 @@
+name = "modules-webhook-debouncer"
+main = "src/index.ts"
+compatibility_date = "2026-05-11"
+
+[[durable_objects.bindings]]
+name = "DEBOUNCER"
+class_name = "WebhookDebouncer"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WebhookDebouncer"]
+
+[vars]
+GITHUB_OWNER = "Xposed-Modules-Repo"
+QUIET_SECONDS = "120"
+PENDING_TTL_SECONDS = "3600"
+
+# Configure as secrets:
+# wrangler secret put GITHUB_WEBHOOK_SECRET -c worker/wrangler.toml
+# wrangler secret put PAGES_DEPLOY_HOOK_URL -c worker/wrangler.toml
+# wrangler secret put DIRTY_REPOS_TOKEN -c worker/wrangler.toml

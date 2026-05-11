@@ -1,0 +1,33 @@
+---
+interface Props {
+  slot?: string
+  class?: string
+  format?: string
+  responsive?: boolean
+}
+
+const client = import.meta.env.PUBLIC_GOOGLE_ADS_CLIENT || import.meta.env.PUBLIC_ADSENSE_CLIENT
+const {
+  slot,
+  class: className = '',
+  format = 'auto',
+  responsive = true
+} = Astro.props
+const enabled = Boolean(client && slot)
+---
+
+{enabled && (
+  <aside class={`ad-slot ${className}`} aria-label="Advertisement">
+    <ins
+      class="adsbygoogle"
+      style="display:block"
+      data-ad-client={client}
+      data-ad-slot={slot}
+      data-ad-format={format}
+      data-full-width-responsive={responsive ? 'true' : 'false'}
+    />
+    <script is:inline>
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </aside>
+)}

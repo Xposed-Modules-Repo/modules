@@ -1,0 +1,74 @@
+---
+import Layout from '../../components/Layout.astro'
+import ReleaseList from '../../components/ReleaseList.astro'
+import AdSlot from '../../components/AdSlot.astro'
+import { getSiteData } from '../../lib/modules'
+
+export async function getStaticPaths () {
+  const data = await getSiteData()
+  return data.allModules.map(module => ({
+    params: { name: module.name },
+    props: { module }
+  }))
+}
+
+const { module } = Astro.props
+const description = module.summary || module.description || module.name
+const latest = module.releases[0]
+---
+
+<Layout title={module.description || module.name} description={description}>
+  <div class="module-layout">
+    <article>
+      <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_TOP} />
+      {module.readmeHTML
+        ? <div class="markdown-panel markdown-body" set:html={module.readmeHTML} />
+        : <div class="markdown-panel">{module.summary || module.description}</div>}
+      <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_BOTTOM} />
+      <ReleaseList releases={module.releases} />
+    </article>
+    <aside class="module-sidebar">
+      <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_SIDEBAR} class="ad-slot-sidebar" />
+      <div class="Box">
+        <div class="Box-header"><h2 class="Box-title">Package</h2></div>
+        <div class="Box-body"><code>{module.name}</code></div>
+      </div>
+      {(module.collaborators.length > 0 || module.additionalAuthors?.length) && (
+        <div class="Box">
+          <div class="Box-header"><h2 class="Box-title">Authors</h2></div>
+          <div class="Box-body">
+            {module.collaborators.map(author => (
+              <p class="mb-2"><a href={`https://github.com/${author.login}`} target="_blank" rel="noreferrer">{author.name || author.login}</a></p>
+            ))}
+            {module.additionalAuthors?.map(author => (
+              <p class="mb-2"><a href={author.link} target="_blank" rel="noreferrer">{author.name || author.link}</a></p>
+            ))}
+          </div>
+        </div>
+      )}
+      {module.homepageUrl && (
+        <div class="Box">
+          <div class="Box-header"><h2 class="Box-title">Support / Discussion URL</h2></div>
+          <div class="Box-body"><a href={module.homepageUrl} target="_blank" rel="noreferrer">{module.homepageUrl}</a></div>
+        </div>
+      )}
+      {module.sourceUrl && (
+        <div class="Box">
+          <div class="Box-header"><h2 class="Box-title">Source URL</h2></div>
+          <div class="Box-body"><a href={module.sourceUrl} target="_blank" rel="noreferrer">{module.sourceUrl}</a></div>
+        </div>
+      )}
+      {latest && (
+        <div class="Box">
+          <div class="Box-header"><h2 class="Box-title">Latest Release</h2></div>
+          <div class="Box-body">
+            <h3 class="h4"><a href={latest.url} target="_blank" rel="noreferrer">{latest.name || latest.tagName}</a></h3>
+            <p class="mb-1"><span class={`Label ${latest.isPrerelease ? 'Label--attention' : 'Label--success'}`}>{latest.isPrerelease ? 'Pre-release' : 'Stable'}</span></p>
+            {latest.publishedAt && <p class="color-fg-muted mb-2">{new Date(latest.publishedAt).toLocaleString()}</p>}
+            <a href="#releases">View all releases</a>
+          </div>
+        </div>
+      )}
+    </aside>
+  </div>
+</Layout>

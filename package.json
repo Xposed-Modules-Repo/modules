@@ -1,0 +1,44 @@
+{
+  "name": "modules",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static Xposed module repository built from GitHub data",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "tsc --noEmit",
+    "worker:dev": "wrangler dev -c worker/wrangler.toml",
+    "worker:deploy": "wrangler deploy -c worker/wrangler.toml"
+  },
+  "dependencies": {
+    "@astrojs/react": "latest",
+    "@astrojs/sitemap": "latest",
+    "@primer/css": "20.4.8",
+    "@primer/octicons-react": "latest",
+    "astro": "latest",
+    "cheerio": "latest",
+    "marked": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "remark-parse": "latest",
+    "sass": "latest",
+    "unified": "latest",
+    "unist-util-visit": "latest"
+  },
+  "devDependencies": {
+    "@astrojs/check": "latest",
+    "@cloudflare/workers-types": "^4.20260511.1",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest",
+    "wrangler": "latest"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "packageManager": "npm@11.12.1"
+}

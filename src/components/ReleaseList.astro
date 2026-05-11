@@ -1,0 +1,51 @@
+---
+import type { ModuleRelease } from '../lib/types'
+
+interface Props {
+  releases: ModuleRelease[]
+}
+
+const { releases } = Astro.props
+
+function sizeLabel (bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit++
+  }
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`
+}
+---
+
+{releases.length > 0 && (
+  <section id="releases" class="release-list">
+    <h1>Releases</h1>
+    {releases.map(release => (
+      <article class="release-panel">
+        <div class="release-heading">
+          <h2><a href={release.url} target="_blank" rel="noreferrer">{release.name || release.tagName}</a></h2>
+          <span class={`Label ${release.isPrerelease ? 'Label--attention' : 'Label--success'}`}>
+            {release.isPrerelease ? 'Pre-release' : 'Stable'}
+          </span>
+        </div>
+        {release.publishedAt && <p class="color-fg-muted">{new Date(release.publishedAt).toLocaleString()}</p>}
+        {release.descriptionHTML && <div class="markdown-body" set:html={release.descriptionHTML} />}
+        {release.releaseAssets.length > 0 && (
+          <>
+            <h3>Downloads</h3>
+            <ul class="download-list">
+              {release.releaseAssets.map(asset => (
+                <li>
+                  <a href={asset.downloadUrl} target="_blank" rel="noreferrer">{asset.name}</a>
+                  <span class="color-fg-muted"> · {sizeLabel(asset.size)}{typeof asset.downloadCount === 'number' ? ` · ${asset.downloadCount} downloads` : ''}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </article>
+    ))}
+  </section>
+)}

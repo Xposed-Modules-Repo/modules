@@ -1,0 +1,34 @@
+---
+import Layout from '../../components/Layout.astro'
+import ModuleGrid from '../../components/ModuleGrid.astro'
+import Pagination from '../../components/Pagination.astro'
+import AdSlot from '../../components/AdSlot.astro'
+import { getSiteData } from '../../lib/modules'
+
+export async function getStaticPaths () {
+  const data = await getSiteData()
+  const pageCount = Math.ceil(data.listItems.length / data.pageSize)
+  return Array.from({ length: Math.max(pageCount - 1, 0) }, (_, index) => {
+    const page = index + 2
+    return { params: { page: String(page) } }
+  })
+}
+
+const data = await getSiteData()
+const current = Number(Astro.params.page)
+const pageCount = Math.ceil(data.listItems.length / data.pageSize)
+const start = (current - 1) * data.pageSize
+const modules = data.listItems.slice(start, start + data.pageSize)
+---
+
+<Layout title={`Browse Modules · Page ${current}`}>
+  <section class="page-heading">
+    <div>
+      <h1>Browse Modules</h1>
+      <p>Page {current} of {pageCount}</p>
+    </div>
+  </section>
+  <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_TOP} />
+  <ModuleGrid modules={modules} />
+  <Pagination current={current} pageCount={pageCount} />
+</Layout>

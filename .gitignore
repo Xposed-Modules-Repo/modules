@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.astro/
+.cache/
+.env
+.env.*
+public/github-assets/
+npm-debug.log*

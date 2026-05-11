@@ -1,0 +1,21 @@
+---
+interface Props {
+  current: number
+  pageCount: number
+}
+
+const { current, pageCount } = Astro.props
+const pageHref = (page: number) => page === 1 ? '/' : `/page/${page}/`
+---
+
+{pageCount > 1 && (
+  <nav class="pagination" aria-label="Pagination">
+    {current > 1 && <a href={pageHref(current - 1)} aria-label="Previous page">‹</a>}
+    {Array.from({ length: pageCount }, (_, index) => index + 1).map(page => (
+      page === current
+        ? <span aria-current="page">{page}</span>
+        : <a href={pageHref(page)}>{page}</a>
+    ))}
+    {current < pageCount && <a href={pageHref(current + 1)} aria-label="Next page">›</a>}
+  </nav>
+)}

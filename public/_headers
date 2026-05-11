@@ -1,0 +1,14 @@
+/github-assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/modules.json
+  Cache-Control: public, max-age=300
+
+/search.json
+  Cache-Control: public, max-age=300
+
+/module/*.json
+  Cache-Control: public, max-age=300
