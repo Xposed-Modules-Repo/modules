@@ -14,7 +14,7 @@ Cloudflare Pages:
 ```text
 Build command: npm run build
 Build output: dist
-Node version: 20.11 or newer
+Node version: 22.11 or newer
 ```
 
 Useful environment variables:
