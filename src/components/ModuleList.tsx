@@ -118,7 +118,8 @@ export default function ModuleList ({
       </div>
       <div className="module-list">
         {visibleModules.map(module => {
-          const description = module.description || module.summary || 'No description provided.'
+          const title = module.description || module.name
+          const summary = module.summary?.trim()
           const labels = releaseLabels(module)
 
           return (
@@ -126,10 +127,10 @@ export default function ModuleList ({
               <RepoIcon className="module-list-icon" size={16} />
               <div className="module-list-main">
                 <div className="module-list-title-line">
-                  <h2><a href={`/module/${module.name}/`}>{module.name}</a></h2>
-                  <span className="Label Label--secondary">Public</span>
+                  <h2><a href={`/module/${module.name}/`}>{title}</a></h2>
+                  <span className="Label Label--secondary module-list-package">{module.name}</span>
                 </div>
-                <p className="module-list-description">{description}</p>
+                {summary && <p className="module-list-description">{summary}</p>}
                 <div className="module-list-meta">
                   {labels && <span className="module-list-releases">{labels}</span>}
                   {typeof module.stargazerCount === 'number' && module.stargazerCount > 0 && (
