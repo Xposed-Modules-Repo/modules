@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import fs from 'node:fs/promises'
 import { load } from 'cheerio'
 import {
   cacheRoot,
@@ -7,10 +8,12 @@ import {
   readJson,
   readManifest,
   repoDataPath,
+  renderedReadmePath,
   writeJson,
   writeManifest
 } from './cache'
 import { githubGraphql, githubRestJson } from './github'
+import { canonicalizeAssetHtml } from './asset-proxy'
 import {
   README_ASSET_VERSION,
   refreshReadmeImageAssets,
@@ -520,7 +523,7 @@ function normalizeReleases (repo: RepoNode): ModuleRelease[] {
       url: release.url,
       isDraft: release.isDraft,
       description: release.description,
-      descriptionHTML: replacePrivateImages(release.description, release.descriptionHTML),
+      descriptionHTML: canonicalizeAssetHtml(replacePrivateImages(release.description, release.descriptionHTML)),
       createdAt: release.createdAt,
       publishedAt: release.publishedAt,
       updatedAt: release.updatedAt,
@@ -599,7 +602,12 @@ function minimalRepositoryRecord (repo: RepoNode, fingerprint: string): ModuleRe
 }
 
 async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string): Promise<void> {
-  if (!record.readmeHTML) return
+  let changed = refreshCachedHtmlAssets(record)
+  await refreshRenderedReadmeHtml(record)
+  if (!record.readmeHTML) {
+    if (changed) await writeJson(dataPath, record)
+    return
+  }
 
   await restoreMirroredImages(record.readmeHTML)
   if (
@@ -607,6 +615,7 @@ async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string
     !record.readme ||
     !record.readmeHTML.includes('\\')
   ) {
+    if (changed) await writeJson(dataPath, record)
     return
   }
 
@@ -620,7 +629,61 @@ async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string
 
   record.readmeHTML = refreshedHtml
   record.readmeAssetVersion = README_ASSET_VERSION
-  await writeJson(dataPath, record)
+  changed = true
+  if (changed) await writeJson(dataPath, record)
+}
+
+function refreshCachedHtmlAssets (record: ModuleRecord): boolean {
+  let changed = false
+
+  const readmeHTML = canonicalizeAssetHtml(replacePrivateImages(record.readme, record.readmeHTML))
+  if (readmeHTML !== record.readmeHTML) {
+    record.readmeHTML = readmeHTML
+    changed = true
+  }
+
+  for (const release of record.releases) {
+    if (refreshCachedReleaseAssets(release)) changed = true
+  }
+
+  if (refreshCachedReleaseAssets(record.latestRelease)) changed = true
+  if (refreshCachedReleaseAssets(record.latestBetaRelease)) changed = true
+  if (refreshCachedReleaseAssets(record.latestSnapshotRelease)) changed = true
+
+  return changed
+}
+
+async function refreshRenderedReadmeHtml (record: ModuleRecord): Promise<void> {
+  if (!record.readme || !record.readmeOid) return
+
+  const htmlPath = renderedReadmePath(record.name, record.readmeOid)
+  if (!await pathExists(htmlPath)) return
+
+  const cachedHtml = await fs.readFile(htmlPath, 'utf8')
+  const refreshedHtml = canonicalizeAssetHtml(replacePrivateImages(record.readme, cachedHtml)) || cachedHtml
+  if (refreshedHtml !== cachedHtml) await fs.writeFile(htmlPath, refreshedHtml, 'utf8')
+}
+
+function refreshCachedReleaseAssets (release: ModuleRelease | undefined): boolean {
+  if (!release || typeof release !== 'object') return false
+
+  let changed = false
+  const descriptionHTML = canonicalizeAssetHtml(replacePrivateImages(release.description, release.descriptionHTML))
+  if (descriptionHTML !== release.descriptionHTML) {
+    release.descriptionHTML = descriptionHTML
+    changed = true
+  }
+
+  if (!release.releaseAssets) return changed
+
+  for (const asset of release.releaseAssets as Array<ReleaseAsset & { proxyDownloadUrl?: unknown }>) {
+    if ('proxyDownloadUrl' in asset) {
+      delete asset.proxyDownloadUrl
+      changed = true
+    }
+  }
+
+  return changed
 }
 
 function assignLatestReleases (record: ModuleRecord): void {

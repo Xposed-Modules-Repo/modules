@@ -15,6 +15,7 @@ import {
   renderedReadmePath
 } from './cache'
 import { githubBuffer, renderGithubMarkdown } from './github'
+import { canonicalizeAssetHtml } from './asset-proxy'
 
 export const README_ASSET_VERSION = 2
 
@@ -51,13 +52,17 @@ export async function renderReadmeHtml (
   const htmlPath = renderedReadmePath(repoName, readmeOid)
   if (await pathExists(htmlPath)) {
     const cachedHtml = await fs.readFile(htmlPath, 'utf8')
-    const refreshedHtml = await mirrorRelativeImages(owner, repoName, markdown, cachedHtml, commitOid)
+    const restoredHtml = replacePrivateImages(markdown, cachedHtml) || cachedHtml
+    const mirroredHtml = await mirrorRelativeImages(owner, repoName, markdown, restoredHtml, commitOid)
+    const refreshedHtml = canonicalizeAssetHtml(mirroredHtml) || mirroredHtml
     if (refreshedHtml !== cachedHtml) await fs.writeFile(htmlPath, refreshedHtml, 'utf8')
     return refreshedHtml
   }
 
   let html = await renderMarkdown(owner, repoName, markdown)
+  html = replacePrivateImages(markdown, html) || html
   html = await mirrorRelativeImages(owner, repoName, markdown, html, commitOid)
+  html = canonicalizeAssetHtml(html) || html
 
   await ensureDir(path.dirname(htmlPath))
   await fs.writeFile(htmlPath, html, 'utf8')
@@ -205,7 +210,9 @@ export async function refreshReadmeImageAssets (
   html: string,
   commitOid: string
 ): Promise<string> {
-  return mirrorRelativeImages(owner, repoName, markdown, html, commitOid)
+  const restoredHtml = replacePrivateImages(markdown, html) || html
+  const mirroredHtml = await mirrorRelativeImages(owner, repoName, markdown, restoredHtml, commitOid)
+  return canonicalizeAssetHtml(mirroredHtml) || mirroredHtml
 }
 
 function extractRelativeMarkdownImages (markdown: string): Set<string> {

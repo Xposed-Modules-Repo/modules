@@ -1,5 +1,6 @@
 ---
 import type { ModuleRelease } from '../lib/types'
+import { proxyAssetUrl, rewriteAssetProxyHtml } from '../lib/asset-proxy'
 
 interface Props {
   releases: ModuleRelease[]
@@ -31,7 +32,7 @@ function sizeLabel (bytes: number): string {
           </span>
         </div>
         {release.publishedAt && <p class="color-fg-muted">{new Date(release.publishedAt).toLocaleString()}</p>}
-        {release.descriptionHTML && <div class="markdown-body" set:html={release.descriptionHTML} />}
+        {release.descriptionHTML && <div class="markdown-body" set:html={rewriteAssetProxyHtml(release.descriptionHTML)} />}
         {release.releaseAssets.length > 0 && (
           <div class="release-assets">
             <div class="release-assets-heading">
@@ -46,7 +47,7 @@ function sizeLabel (bytes: number): string {
                       <path fill="currentColor" d="M8.878.392a1.75 1.75 0 0 0-1.756 0L2.12 3.284A1.75 1.75 0 0 0 1.25 4.8v5.937c0 .625.334 1.203.878 1.514l5 2.857a1.75 1.75 0 0 0 1.744 0l5-2.857a1.75 1.75 0 0 0 .878-1.514V4.8c0-.625-.334-1.203-.878-1.514ZM7.875 1.69a.25.25 0 0 1 .25 0l4.63 2.674L8 7.106 3.245 4.364Zm.875 12.058V8.405l4.5-2.598v4.93a.25.25 0 0 1-.126.217Zm-1.5 0-4.374-2.794a.25.25 0 0 1-.126-.217v-4.93l4.5 2.598Z"/>
                     </svg>
                   </span>
-                  <a class="release-asset-name" href={asset.downloadUrl} target="_blank" rel="noreferrer">{asset.name}</a>
+                  <a class="release-asset-name" href={proxyAssetUrl(asset.downloadUrl) || asset.downloadUrl} target="_blank" rel="noreferrer">{asset.name}</a>
                   <span class="release-asset-meta">{sizeLabel(asset.size)}{typeof asset.downloadCount === 'number' ? ` · ${asset.downloadCount} downloads` : ''}</span>
                 </li>
               ))}

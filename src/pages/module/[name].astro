@@ -3,6 +3,7 @@ import Layout from '../../components/Layout.astro'
 import ReleaseList from '../../components/ReleaseList.astro'
 import AdSlot from '../../components/AdSlot.astro'
 import { getSiteData } from '../../lib/modules'
+import { rewriteAssetProxyHtml } from '../../lib/asset-proxy'
 
 export async function getStaticPaths () {
   const data = await getSiteData()
@@ -15,6 +16,7 @@ export async function getStaticPaths () {
 const { module } = Astro.props
 const description = module.summary || module.description || module.name
 const latest = module.releases[0]
+const readmeHTML = rewriteAssetProxyHtml(module.readmeHTML)
 const adsClient = import.meta.env.PUBLIC_GOOGLE_ADS_CLIENT || import.meta.env.PUBLIC_ADSENSE_CLIENT
 const adSlots = {
   top: import.meta.env.PUBLIC_AD_SLOT_TOP,
@@ -27,8 +29,8 @@ const hasModuleAds = Boolean(adsClient && (adSlots.top || adSlots.sidebar || adS
 <Layout title={module.description || module.name} description={description}>
   <div class="module-layout">
     <article class="module-readme">
-      {module.readmeHTML
-        ? <div class="markdown-panel markdown-body" set:html={module.readmeHTML} />
+      {readmeHTML
+        ? <div class="markdown-panel markdown-body" set:html={readmeHTML} />
         : <div class="markdown-panel">{module.summary || module.description}</div>}
     </article>
     <aside class="module-sidebar">
