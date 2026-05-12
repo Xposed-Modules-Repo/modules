@@ -40,7 +40,7 @@ a {
 .site-header-inner,
 .site-main,
 .site-footer-inner {
-  width: min(var(--repo-max-width), calc(100vw - 32px));
+  width: min(var(--repo-max-width), calc(100% - 32px));
   margin: 0 auto;
 }
 
@@ -245,14 +245,24 @@ a {
   gap: 24px;
 }
 
+.module-layout > article {
+  min-width: 0;
+}
+
 .module-sidebar {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .module-sidebar .Box {
   background: var(--color-canvas-subtle);
+}
+
+.module-sidebar .Box-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .markdown-body {
@@ -260,10 +270,27 @@ a {
   min-width: 0;
   padding: 0;
   background: transparent;
+  overflow-wrap: break-word;
+}
+
+.markdown-body :where(h1, h2, h3, h4, h5, h6, p, li, blockquote, a, code) {
+  overflow-wrap: anywhere;
+}
+
+.markdown-body :where(img, video) {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-body :where(pre, table) {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .markdown-panel,
 .release-panel {
+  max-width: 100%;
+  overflow: hidden;
   padding: 20px;
   border: 1px solid var(--color-border-default);
   border-radius: 6px;
@@ -490,6 +517,11 @@ a {
 
   .module-layout {
     grid-template-columns: 1fr;
+  }
+
+  .markdown-panel,
+  .release-panel {
+    padding: 16px;
   }
 
   .module-list-row {
