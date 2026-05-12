@@ -15,20 +15,23 @@ export async function getStaticPaths () {
 const { module } = Astro.props
 const description = module.summary || module.description || module.name
 const latest = module.releases[0]
+const adsClient = import.meta.env.PUBLIC_GOOGLE_ADS_CLIENT || import.meta.env.PUBLIC_ADSENSE_CLIENT
+const adSlots = {
+  top: import.meta.env.PUBLIC_AD_SLOT_TOP,
+  sidebar: import.meta.env.PUBLIC_AD_SLOT_SIDEBAR,
+  bottom: import.meta.env.PUBLIC_AD_SLOT_BOTTOM
+}
+const hasModuleAds = Boolean(adsClient && (adSlots.top || adSlots.sidebar || adSlots.bottom))
 ---
 
 <Layout title={module.description || module.name} description={description}>
   <div class="module-layout">
-    <article>
-      <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_TOP} />
+    <article class="module-readme">
       {module.readmeHTML
         ? <div class="markdown-panel markdown-body" set:html={module.readmeHTML} />
         : <div class="markdown-panel">{module.summary || module.description}</div>}
-      <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_BOTTOM} />
-      <ReleaseList releases={module.releases} />
     </article>
     <aside class="module-sidebar">
-      <AdSlot slot={import.meta.env.PUBLIC_AD_SLOT_SIDEBAR} class="ad-slot-sidebar" />
       <div class="Box">
         <div class="Box-header"><h2 class="Box-title">Package</h2></div>
         <div class="Box-body"><code>{module.name}</code></div>
@@ -70,5 +73,15 @@ const latest = module.releases[0]
         </div>
       )}
     </aside>
+    <div class="module-releases">
+      <ReleaseList releases={module.releases} />
+    </div>
+    {hasModuleAds && (
+      <div class="module-ads">
+        <AdSlot slot={adSlots.top} />
+        <AdSlot slot={adSlots.sidebar} class="ad-slot-sidebar" />
+        <AdSlot slot={adSlots.bottom} />
+      </div>
+    )}
   </div>
 </Layout>

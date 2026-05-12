@@ -242,14 +242,26 @@ a {
 .module-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 304px;
+  grid-template-areas:
+    "readme sidebar"
+    "releases sidebar"
+    "ads ads";
   gap: 24px;
+  align-items: start;
 }
 
-.module-layout > article {
+.module-readme {
+  grid-area: readme;
+  min-width: 0;
+}
+
+.module-releases {
+  grid-area: releases;
   min-width: 0;
 }
 
 .module-sidebar {
+  grid-area: sidebar;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -263,6 +275,18 @@ a {
 .module-sidebar .Box-body {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.module-ads {
+  grid-area: ads;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.module-ads .ad-slot {
+  margin: 0;
 }
 
 .markdown-body {
@@ -517,6 +541,11 @@ a {
 
   .module-layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "readme"
+      "sidebar"
+      "releases"
+      "ads";
   }
 
   .markdown-panel,
@@ -530,10 +559,6 @@ a {
 
   .module-list-actions {
     grid-column: 2;
-  }
-
-  .module-sidebar {
-    order: -1;
   }
 
   .page-heading {
