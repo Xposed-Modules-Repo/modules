@@ -10,7 +10,8 @@ const ASSET_PROXY_ROUTE_PATTERNS = [
   /^\/user-images\//,
   /^\/user-attachments\//,
   /^\/avatars\//,
-  /^\/release\//
+  /^\/release\//,
+  /^\/[^/]+\/[^/]+\/releases\/download\//
 ]
 
 interface AssetProxyConfig {
@@ -247,6 +248,10 @@ function canonicalRouteUrl (pathname: string, searchParams?: URLSearchParams): s
     return `https://github.com/${pathname.slice('/release/'.length)}${canonicalSearch(searchParams)}`
   }
 
+  if (isGithubReleaseDownloadPath(pathname.split('/').filter(Boolean))) {
+    return `https://github.com${pathname}${canonicalSearch(searchParams)}`
+  }
+
   return null
 }
 
@@ -282,7 +287,7 @@ function githubRoutePath (pathname: string, options: ProxyRouteOptions): string 
   }
 
   if (parts.length >= 6 && parts[2] === 'releases' && parts[3] === 'download') {
-    return `/release${pathname}`
+    return pathname
   }
 
   if (isGithubWorkflowBadgePath(parts)) {
@@ -290,6 +295,10 @@ function githubRoutePath (pathname: string, options: ProxyRouteOptions): string 
   }
 
   return null
+}
+
+function isGithubReleaseDownloadPath (parts: string[]): boolean {
+  return parts.length >= 6 && parts[2] === 'releases' && parts[3] === 'download'
 }
 
 function isGithubWorkflowBadgePath (parts: string[]): boolean {
