@@ -9,6 +9,7 @@ const ASSET_PROXY_ROUTE_PATTERNS = [
   /^\/raw\//,
   /^\/user-images\//,
   /^\/user-attachments\//,
+  /^\/avatars\//,
   /^\/release\//
 ]
 
@@ -24,16 +25,21 @@ interface ProxyRouteOptions {
   allowGithubBlob?: boolean
 }
 
+interface ProxyRoute {
+  pathname: string
+  searchParams?: URLSearchParams
+}
+
 export function proxyAssetUrl (value: string | null | undefined): string | null {
   if (!value) return null
 
   const config = assetProxyConfig()
   if (!config) return null
 
-  const routePath = proxyRoutePath(value)
-  if (!routePath) return null
+  const route = proxyRoute(value)
+  if (!route) return null
 
-  return signedAssetUrl(routePath, config)
+  return signedAssetUrl(route, config)
 }
 
 export function rewriteAssetProxyHtml (html: string | null | undefined): string | null | undefined {
@@ -52,12 +58,12 @@ export function rewriteAssetProxyHtml (html: string | null | undefined): string 
       const value = $(element).attr(attr)
       if (!value) continue
 
-      const routePath = proxyRoutePath(value, {
+      const route = proxyRoute(value, {
         allowGithubBlob: attr !== 'href' || isImageLink($, element, value)
       })
-      if (!routePath) continue
+      if (!route) continue
 
-      $(element).attr(attr, signedAssetUrl(routePath, config))
+      $(element).attr(attr, signedAssetUrl(route, config))
       changed = true
     }
   })
@@ -152,7 +158,7 @@ function assetProxyConfig (): AssetProxyConfig | null {
   return { baseUrl, key, timestamp, signatureParam, timestampParam }
 }
 
-function proxyRoutePath (value: string, options: ProxyRouteOptions = {}): string | null {
+function proxyRoute (value: string, options: ProxyRouteOptions = {}): ProxyRoute | null {
   let url: URL
   try {
     url = new URL(value)
@@ -162,16 +168,27 @@ function proxyRoutePath (value: string, options: ProxyRouteOptions = {}): string
 
   if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
 
+  let pathname: string | null = null
   switch (url.hostname) {
     case 'raw.githubusercontent.com':
-      return `/raw${url.pathname}`
+      pathname = `/raw${url.pathname}`
+      break
     case 'user-images.githubusercontent.com':
-      return `/user-images${url.pathname}`
+      pathname = `/user-images${url.pathname}`
+      break
+    case 'avatars.githubusercontent.com':
+      pathname = `/avatars${url.pathname}`
+      break
     case 'github.com':
-      return githubRoutePath(url.pathname, options)
+      pathname = githubRoutePath(url.pathname, options)
+      break
     default:
       return null
   }
+
+  if (!pathname) return null
+
+  return { pathname, searchParams: url.searchParams }
 }
 
 function canonicalAssetUrl (value: string): string | null {
@@ -191,7 +208,7 @@ function canonicalAssetUrl (value: string): string | null {
 
   const proxyHost = assetProxyBaseHost()
   if (url.hostname === proxyHost && ASSET_PROXY_ROUTE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
-    return canonicalRouteUrl(url.pathname)
+    return canonicalRouteUrl(url.pathname, url.searchParams)
   }
 
   return null
@@ -205,13 +222,13 @@ function assetProxyBaseHost (): string {
   }
 }
 
-function canonicalRouteUrl (pathname: string): string | null {
+function canonicalRouteUrl (pathname: string, searchParams?: URLSearchParams): string | null {
   if (pathname.startsWith('/raw/')) {
-    return `https://raw.githubusercontent.com/${pathname.slice('/raw/'.length)}`
+    return `https://raw.githubusercontent.com/${pathname.slice('/raw/'.length)}${canonicalSearch(searchParams)}`
   }
 
   if (pathname.startsWith('/user-images/')) {
-    return `https://user-images.githubusercontent.com/${pathname.slice('/user-images/'.length)}`
+    return `https://user-images.githubusercontent.com/${pathname.slice('/user-images/'.length)}${canonicalSearch(searchParams)}`
   }
 
   if (pathname.startsWith('/user-attachments/')) {
@@ -222,11 +239,25 @@ function canonicalRouteUrl (pathname: string): string | null {
     return `https://github.com${pathname}`
   }
 
+  if (pathname.startsWith('/avatars/')) {
+    return `https://avatars.githubusercontent.com/${pathname.slice('/avatars/'.length)}${canonicalSearch(searchParams)}`
+  }
+
   if (pathname.startsWith('/release/')) {
-    return `https://github.com/${pathname.slice('/release/'.length)}`
+    return `https://github.com/${pathname.slice('/release/'.length)}${canonicalSearch(searchParams)}`
   }
 
   return null
+}
+
+function canonicalSearch (searchParams?: URLSearchParams): string {
+  if (!searchParams) return ''
+
+  const params = new URLSearchParams(searchParams)
+  params.delete(process.env.ASSET_PROXY_SIGNATURE_PARAM || 'sign')
+  params.delete(process.env.ASSET_PROXY_TIMESTAMP_PARAM || 't')
+  const search = params.toString()
+  return search ? `?${search}` : ''
 }
 
 function githubRoutePath (pathname: string, options: ProxyRouteOptions): string | null {
@@ -254,16 +285,34 @@ function githubRoutePath (pathname: string, options: ProxyRouteOptions): string 
     return `/release${pathname}`
   }
 
+  if (isGithubWorkflowBadgePath(parts)) {
+    return pathname
+  }
+
   return null
 }
 
-function signedAssetUrl (routePath: string, config: AssetProxyConfig): string {
+function isGithubWorkflowBadgePath (parts: string[]): boolean {
+  const lastPart = parts.at(-1)
+  if (!lastPart?.toLowerCase().endsWith('badge.svg')) return false
+
+  return (parts.length >= 5 && parts[2] === 'actions' && parts[3] === 'workflows') ||
+    (parts.length >= 4 && parts[2] === 'workflows')
+}
+
+function signedAssetUrl (route: ProxyRoute, config: AssetProxyConfig): string {
   const digest = crypto
     .createHash('md5')
-    .update(`${config.key}${routePath}${config.timestamp}`)
+    .update(`${config.key}${route.pathname}${config.timestamp}`)
     .digest('hex')
 
-  const target = new URL(routePath, config.baseUrl)
+  const target = new URL(route.pathname, config.baseUrl)
+  const routeSearchParams = new URLSearchParams(route.searchParams)
+  routeSearchParams.delete(config.signatureParam)
+  routeSearchParams.delete(config.timestampParam)
+  routeSearchParams.forEach((value, key) => {
+    target.searchParams.append(key, value)
+  })
   target.searchParams.set(config.signatureParam, digest)
   target.searchParams.set(config.timestampParam, config.timestamp)
   return target.toString()
@@ -276,10 +325,10 @@ function rewriteSrcset (srcset: string, config: AssetProxyConfig): string {
       const parts = entry.trim().split(/\s+/)
       if (!parts[0]) return entry
 
-      const routePath = proxyRoutePath(parts[0], { allowGithubBlob: true })
-      if (!routePath) return entry.trim()
+      const route = proxyRoute(parts[0], { allowGithubBlob: true })
+      if (!route) return entry.trim()
 
-      return [signedAssetUrl(routePath, config), ...parts.slice(1)].join(' ')
+      return [signedAssetUrl(route, config), ...parts.slice(1)].join(' ')
     })
     .join(', ')
 }
