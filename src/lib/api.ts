@@ -1,4 +1,4 @@
-import { proxyAssetUrl, rewriteAssetProxyHtml, rewriteAssetProxyMarkdown } from './asset-proxy'
+import { proxyAssetUrl, rewriteAssetProxyHtml } from './asset-proxy'
 import type { ModuleRecord, ModuleRelease, ReleaseAsset } from './types'
 
 type ApiReleaseAsset = ReleaseAsset & {
@@ -23,7 +23,7 @@ function apiReleaseAsset (asset: ReleaseAsset): ApiReleaseAsset {
 function apiRelease (release: ModuleRelease): ApiModuleRelease {
   return {
     ...release,
-    description: rewriteAssetProxyMarkdown(release.description) || release.description,
+    description: undefined,
     descriptionHTML: rewriteAssetProxyHtml(release.descriptionHTML) || release.descriptionHTML,
     releaseAssets: release.releaseAssets?.map(apiReleaseAsset)
   }
@@ -40,12 +40,11 @@ export function moduleJson (module: ModuleRecord): Record<string, unknown> {
     latestSnapshotRelease,
     ...publicModule
   } = module
-  const readme = rewriteAssetProxyMarkdown(module.readme) || module.readme
   const readmeHTML = rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML
 
   return {
     ...publicModule,
-    readme,
+    readme: undefined,
     readmeHTML,
     releases: module.releases.map(apiRelease),
     collaborators: module.collaborators.map(author => ({

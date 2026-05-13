@@ -98,15 +98,6 @@ export function rewriteAssetProxyHtml (html: string | null | undefined): string 
   return changed ? ($.root().html() || html) : html
 }
 
-export function rewriteAssetProxyMarkdown (markdown: string | null | undefined): string | null | undefined {
-  if (!markdown) return markdown
-
-  const config = assetProxyConfig()
-  if (!config) return markdown
-
-  return rewriteAssetProxyText(markdown, config, { allowGithubBlob: true })
-}
-
 function rewriteAssetProxyText (value: string, config: AssetProxyConfig, options: ProxyRouteOptions = {}): string {
   return value.replace(MARKDOWN_URL_PATTERN, match => {
     const [url, suffix] = splitMarkdownUrl(match)
