@@ -65,23 +65,27 @@ export class WebhookDebouncer {
     }
 
     const dirtyRepos = await this.state.storage.get<string[]>('dirtyRepos') || []
-    await this.state.storage.delete(['dirtyRepos', 'scheduledAt'])
 
     if (!dirtyRepos.length) return
     if (!this.env.PAGES_DEPLOY_HOOK_URL) {
       throw new Error('PAGES_DEPLOY_HOOK_URL is not configured')
     }
 
+    const pendingRepos: PendingRepos = {
+      repos: dirtyRepos,
+      triggeredAt: Date.now()
+    }
+    await this.state.storage.put('pendingRepos', pendingRepos)
+    await this.state.storage.delete(['dirtyRepos', 'scheduledAt'])
+
     const response = await fetch(this.env.PAGES_DEPLOY_HOOK_URL, { method: 'POST' })
     if (!response.ok) {
-      await this.state.storage.put('dirtyRepos', dirtyRepos)
+      const queuedRepos = await this.state.storage.get<string[]>('dirtyRepos') || []
+      await this.state.storage.put('dirtyRepos', [...new Set([...dirtyRepos, ...queuedRepos])].sort())
+      await this.state.storage.delete('pendingRepos')
       throw new Error(`Pages deploy hook failed: ${response.status} ${await response.text()}`)
     }
 
-    await this.state.storage.put<PendingRepos>('pendingRepos', {
-      repos: dirtyRepos,
-      triggeredAt: Date.now()
-    })
     await this.state.storage.put('lastTriggeredAt', Date.now())
   }
 
