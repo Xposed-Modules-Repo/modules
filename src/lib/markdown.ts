@@ -3,21 +3,21 @@ import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { marked } from 'marked'
 import { load } from 'cheerio'
-import { unified } from 'unified'
-import remarkParse from 'remark-parse'
-import { visit } from 'unist-util-visit'
 import {
-  assetCachePath,
-  assetOutputPaths,
-  assetPublicUrl,
   ensureDir,
   pathExists,
   renderedReadmePath
 } from './cache'
-import { githubBuffer, renderGithubMarkdown } from './github'
+import { renderGithubMarkdown } from './github'
 import { canonicalizeAssetHtml } from './asset-proxy'
 
-export const README_ASSET_VERSION = 2
+export const README_ASSET_VERSION = 3
+
+interface ReadmeAssetContext {
+  owner: string
+  repoName: string
+  commitOid: string
+}
 
 const PUBLIC_IMAGE_PATTERNS = [
   /https:\/\/github\.com\/[a-zA-Z0-9-]+\/[\w.-]+\/assets\/\d+\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/g,
@@ -42,6 +42,19 @@ export function replacePrivateImages (markdown: string | null | undefined, html:
   return result
 }
 
+export function normalizeReadmeAssetHtml (
+  markdown: string | null | undefined,
+  html: string | null | undefined,
+  context?: ReadmeAssetContext
+): string | null | undefined {
+  if (!html) return html
+
+  const restoredHtml = replacePrivateImages(markdown, html) || html
+  const unbundledHtml = restoreBundledAssetUrls(restoredHtml)
+  const relativeHtml = context ? rewriteRelativeAssetUrls(unbundledHtml, context) : unbundledHtml
+  return canonicalizeAssetHtml(relativeHtml) || relativeHtml
+}
+
 export async function renderReadmeHtml (
   owner: string,
   repoName: string,
@@ -49,58 +62,94 @@ export async function renderReadmeHtml (
   readmeOid: string,
   commitOid: string
 ): Promise<string> {
+  const context = { owner, repoName, commitOid }
   const htmlPath = renderedReadmePath(repoName, readmeOid)
   if (await pathExists(htmlPath)) {
     const cachedHtml = await fs.readFile(htmlPath, 'utf8')
-    const restoredHtml = replacePrivateImages(markdown, cachedHtml) || cachedHtml
-    const mirroredHtml = await mirrorRelativeImages(owner, repoName, markdown, restoredHtml, commitOid)
-    const refreshedHtml = canonicalizeAssetHtml(mirroredHtml) || mirroredHtml
+    const refreshedHtml = normalizeReadmeAssetHtml(markdown, cachedHtml, context) || cachedHtml
     if (refreshedHtml !== cachedHtml) await fs.writeFile(htmlPath, refreshedHtml, 'utf8')
     return refreshedHtml
   }
 
   let html = await renderMarkdown(owner, repoName, markdown)
-  html = replacePrivateImages(markdown, html) || html
-  html = await mirrorRelativeImages(owner, repoName, markdown, html, commitOid)
-  html = canonicalizeAssetHtml(html) || html
+  html = normalizeReadmeAssetHtml(markdown, html, context) || html
 
   await ensureDir(path.dirname(htmlPath))
   await fs.writeFile(htmlPath, html, 'utf8')
   return html
 }
 
-export async function restoreMirroredImages (html: string): Promise<void> {
+function restoreBundledAssetUrls (html: string): string {
   const $ = load(html, {}, false)
-  const urls = new Set<string>()
+  let changed = false
 
-  $('img').each((_, element) => {
-    const src = $(element).attr('src')
-    if (src?.startsWith('/github-assets/')) urls.add(src)
-  })
+  $('[src], [href], [poster], [data-canonical-src]').each((_, element) => {
+    for (const attr of ['src', 'href', 'poster', 'data-canonical-src']) {
+      const value = $(element).attr(attr)
+      if (!value) continue
 
-  for (const url of urls) {
-    const parts = url.split('/').filter(Boolean).map(part => {
-      try {
-        return decodeURIComponent(part)
-      } catch {
-        return part
-      }
-    })
-
-    const [, owner, repoName, commitOid, ...assetParts] = parts
-    if (!owner || !repoName || !commitOid || !assetParts.length) continue
-
-    const assetPath = assetParts.join('/')
-    const cacheFile = assetCachePath(owner, repoName, commitOid, assetPath)
-    if (!await pathExists(cacheFile)) continue
-
-    for (const outputFile of assetOutputPaths(owner, repoName, commitOid, assetPath)) {
-      if (!await pathExists(outputFile)) {
-        await ensureDir(path.dirname(outputFile))
-        await fs.copyFile(cacheFile, outputFile)
+      const restored = bundledAssetUrl(value)
+      if (restored && restored !== value) {
+        $(element).attr(attr, restored)
+        changed = true
       }
     }
-  }
+  })
+
+  $('[srcset]').each((_, element) => {
+    const srcset = $(element).attr('srcset')
+    if (!srcset) return
+
+    const rewritten = restoreBundledSrcset(srcset)
+    if (rewritten !== srcset) {
+      $(element).attr('srcset', rewritten)
+      changed = true
+    }
+  })
+
+  return changed ? ($.root().html() || html) : html
+}
+
+function rewriteRelativeAssetUrls (html: string, context: ReadmeAssetContext): string {
+  const $ = load(html, {}, false)
+  let changed = false
+
+  $('[src], [poster], [data-canonical-src]').each((_, element) => {
+    for (const attr of ['src', 'poster', 'data-canonical-src']) {
+      const value = $(element).attr(attr)
+      if (!value) continue
+
+      const rewritten = relativeRawUrl(value, context)
+      if (rewritten && rewritten !== value) {
+        $(element).attr(attr, rewritten)
+        changed = true
+      }
+    }
+  })
+
+  $('a[href]').each((_, element) => {
+    const value = $(element).attr('href')
+    if (!value || (!looksLikeImagePath(value) && !$(element).find('img, source').length)) return
+
+    const rewritten = relativeRawUrl(value, context)
+    if (rewritten && rewritten !== value) {
+      $(element).attr('href', rewritten)
+      changed = true
+    }
+  })
+
+  $('[srcset]').each((_, element) => {
+    const srcset = $(element).attr('srcset')
+    if (!srcset) return
+
+    const rewritten = rewriteRelativeSrcset(srcset, context)
+    if (rewritten !== srcset) {
+      $(element).attr('srcset', rewritten)
+      changed = true
+    }
+  })
+
+  return changed ? ($.root().html() || html) : html
 }
 
 async function renderMarkdown (owner: string, repoName: string, markdown: string): Promise<string> {
@@ -150,95 +199,68 @@ async function renderMarkdown (owner: string, repoName: string, markdown: string
   }) as string
 }
 
-async function mirrorRelativeImages (
-  owner: string,
-  repoName: string,
-  markdown: string,
-  html: string,
-  commitOid: string
-): Promise<string> {
-  const assets = extractRelativeMarkdownImages(markdown)
-  if (!assets.size) return html
+function restoreBundledSrcset (srcset: string): string {
+  return srcset
+    .split(',')
+    .map(entry => {
+      const parts = entry.trim().split(/\s+/)
+      if (!parts[0]) return entry
+      const rewritten = bundledAssetUrl(parts[0])
+      if (!rewritten) return entry.trim()
+      return [rewritten, ...parts.slice(1)].join(' ')
+    })
+    .join(', ')
+}
 
-  const publicUrls = new Map<string, string>()
-  for (const assetPath of assets) {
-    try {
-      await mirrorAsset(owner, repoName, commitOid, assetPath)
-      publicUrls.set(assetPath, assetPublicUrl(owner, repoName, commitOid, assetPath))
-    } catch (error) {
-      console.warn(`[assets] Could not mirror ${owner}/${repoName}@${commitOid}:${assetPath}: ${(error as Error).message}`)
-    }
+function rewriteRelativeSrcset (srcset: string, context: ReadmeAssetContext): string {
+  return srcset
+    .split(',')
+    .map(entry => {
+      const parts = entry.trim().split(/\s+/)
+      if (!parts[0]) return entry
+      const rewritten = relativeRawUrl(parts[0], context)
+      if (!rewritten) return entry.trim()
+      return [rewritten, ...parts.slice(1)].join(' ')
+    })
+    .join(', ')
+}
+
+function bundledAssetUrl (value: string): string | null {
+  let pathname: string
+  let search = ''
+  try {
+    const url = new URL(value)
+    pathname = url.pathname
+    search = url.search
+  } catch {
+    const [pathPart, queryPart] = value.split('?', 2)
+    pathname = pathPart
+    search = queryPart ? `?${queryPart}` : ''
   }
 
-  if (!publicUrls.size) return html
+  if (!pathname.startsWith('/github-assets/') && !pathname.startsWith('github-assets/')) return null
 
-  const $ = load(html, {}, false)
-  $('img').each((_, element) => {
-    const current = $(element).attr('src')
-    if (current) {
-      const rewritten = resolveHtmlImageUrl(current, owner, repoName, publicUrls)
-      if (rewritten) $(element).attr('src', rewritten)
-    }
-
-    const srcset = $(element).attr('srcset')
-    if (srcset) {
-      $(element).attr('srcset', rewriteSrcset(srcset, owner, repoName, publicUrls))
+  const parts = pathname.split('/').filter(Boolean).map(part => {
+    try {
+      return decodeURIComponent(part)
+    } catch {
+      return part
     }
   })
+  const [, owner, repoName, commitOid, ...assetParts] = parts
+  if (!owner || !repoName || !commitOid || !assetParts.length) return null
 
-  $('source').each((_, element) => {
-    const srcset = $(element).attr('srcset')
-    if (srcset) {
-      $(element).attr('srcset', rewriteSrcset(srcset, owner, repoName, publicUrls))
-    }
-  })
-
-  $('a').each((_, element) => {
-    const href = $(element).attr('href')
-    if (!href) return
-    const rewritten = resolveHtmlImageUrl(href, owner, repoName, publicUrls)
-    if (rewritten) $(element).attr('href', rewritten)
-  })
-
-  return $.root().html() || html
+  return `https://raw.githubusercontent.com/${[
+    owner,
+    repoName,
+    commitOid,
+    ...assetParts
+  ].map(encodeURIComponent).join('/')}${search}`
 }
 
-export async function refreshReadmeImageAssets (
-  owner: string,
-  repoName: string,
-  markdown: string,
-  html: string,
-  commitOid: string
-): Promise<string> {
-  const restoredHtml = replacePrivateImages(markdown, html) || html
-  const mirroredHtml = await mirrorRelativeImages(owner, repoName, markdown, restoredHtml, commitOid)
-  return canonicalizeAssetHtml(mirroredHtml) || mirroredHtml
-}
-
-function extractRelativeMarkdownImages (markdown: string): Set<string> {
-  const images = new Set<string>()
-  const tree = unified().use(remarkParse).parse(markdown)
-
-  visit(tree, 'image', (node: { url?: string }) => {
-    const resolved = resolveRelativeAsset(node.url || '')
-    if (resolved) images.add(resolved)
-  })
-
-  visit(tree, 'html', (node: { value?: string }) => {
-    if (!node.value) return
-    const $ = load(node.value, {}, false)
-    $('img').each((_, element) => {
-      const resolved = resolveRelativeAsset($(element).attr('src') || '')
-      if (resolved) images.add(resolved)
-    })
-  })
-
-  return images
-}
-
-function resolveRelativeAsset (value: string): string | null {
+function relativeRawUrl (value: string, context: ReadmeAssetContext): string | null {
   const raw = value.trim()
-  if (!raw || raw.startsWith('#') || raw.startsWith('data:')) return null
+  if (!raw || raw.startsWith('#') || raw.startsWith('//') || raw.startsWith('data:')) return null
 
   try {
     const url = new URL(raw)
@@ -247,14 +269,18 @@ function resolveRelativeAsset (value: string): string | null {
     // Not an absolute URL; continue as a repo-relative asset.
   }
 
-  const withoutSuffix = raw.split(/[?#]/, 1)[0]
-  if (!withoutSuffix) return null
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return null
+
+  const match = raw.match(/^([^?#]*)(.*)$/)
+  const pathPart = match?.[1] || ''
+  const suffix = match?.[2] || ''
+  if (!pathPart) return null
 
   let decoded: string
   try {
-    decoded = decodeURI(withoutSuffix)
+    decoded = decodeURI(pathPart)
   } catch {
-    decoded = withoutSuffix
+    decoded = pathPart
   }
 
   decoded = decoded.replace(/\\/g, '/')
@@ -263,68 +289,15 @@ function resolveRelativeAsset (value: string): string | null {
     return null
   }
 
-  return normalized
+  return `https://raw.githubusercontent.com/${[
+    context.owner,
+    context.repoName,
+    context.commitOid,
+    ...normalized.split('/')
+  ].map(encodeURIComponent).join('/')}${suffix}`
 }
 
-async function mirrorAsset (owner: string, repoName: string, commitOid: string, assetPath: string): Promise<void> {
-  const cacheFile = assetCachePath(owner, repoName, commitOid, assetPath)
-
-  if (!await pathExists(cacheFile)) {
-    const rawUrl = `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/${encodeURIComponent(commitOid)}/${assetPath.split('/').map(encodeURIComponent).join('/')}`
-    const body = await githubBuffer(rawUrl)
-    await ensureDir(path.dirname(cacheFile))
-    await fs.writeFile(cacheFile, body)
-  }
-
-  for (const outputFile of assetOutputPaths(owner, repoName, commitOid, assetPath)) {
-    if (!await pathExists(outputFile)) {
-      await ensureDir(path.dirname(outputFile))
-      await fs.copyFile(cacheFile, outputFile)
-    }
-  }
-}
-
-function resolveHtmlImageUrl (
-  current: string,
-  owner: string,
-  repoName: string,
-  publicUrls: Map<string, string>
-): string | null {
-  const relative = resolveRelativeAsset(current)
-  if (relative && publicUrls.has(relative)) return publicUrls.get(relative) || null
-
-  let pathname: string
-  try {
-    const url = new URL(current)
-    pathname = decodeURIComponent(url.pathname).replace(/\\/g, '/')
-  } catch {
-    return null
-  }
-
-  const normalizedOwner = `/${owner}/${repoName}/`
-  if (!pathname.includes(normalizedOwner)) return null
-
-  for (const [assetPath, publicUrl] of publicUrls) {
-    if (pathname.endsWith(`/${assetPath}`)) return publicUrl
-  }
-
-  return null
-}
-
-function rewriteSrcset (
-  srcset: string,
-  owner: string,
-  repoName: string,
-  publicUrls: Map<string, string>
-): string {
-  return srcset
-    .split(',')
-    .map(entry => {
-      const parts = entry.trim().split(/\s+/)
-      if (!parts[0]) return entry
-      const rewritten = resolveHtmlImageUrl(parts[0], owner, repoName, publicUrls)
-      if (!rewritten) return entry.trim()
-      return [rewritten, ...parts.slice(1)].join(' ')
-    })
-    .join(', ')
+function looksLikeImagePath (value: string): boolean {
+  const pathPart = value.split(/[?#]/, 1)[0].toLowerCase()
+  return /\.(avif|gif|jpe?g|png|svg|webp)$/.test(pathPart)
 }

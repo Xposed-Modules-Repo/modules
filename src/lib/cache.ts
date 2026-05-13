@@ -18,9 +18,6 @@ export interface BuildManifest {
 export const cacheRoot = process.env.MODULES_CACHE_DIR ||
   path.join(process.cwd(), 'node_modules', '.astro', 'modules-cache')
 
-export const assetPublicRoot = path.join(process.cwd(), 'public', 'github-assets')
-export const assetBuildRoot = path.join(process.cwd(), 'dist', 'github-assets')
-
 export function safeName (value: string): string {
   return encodeURIComponent(value).replaceAll('%', '_')
 }
@@ -79,23 +76,4 @@ export function repoDataPath (repoName: string): string {
 
 export function renderedReadmePath (repoName: string, readmeOid: string): string {
   return cachePath('gfm-html', safeName(repoName), `${readmeOid}.html`)
-}
-
-export function assetCachePath (owner: string, repoName: string, commitOid: string, assetPath: string): string {
-  return cachePath('github-assets', owner, repoName, commitOid, assetPath)
-}
-
-export function assetOutputPath (owner: string, repoName: string, commitOid: string, assetPath: string): string {
-  return path.join(assetPublicRoot, owner, repoName, commitOid, assetPath)
-}
-
-export function assetOutputPaths (owner: string, repoName: string, commitOid: string, assetPath: string): string[] {
-  return [
-    path.join(assetPublicRoot, owner, repoName, commitOid, assetPath),
-    path.join(assetBuildRoot, owner, repoName, commitOid, assetPath)
-  ]
-}
-
-export function assetPublicUrl (owner: string, repoName: string, commitOid: string, assetPath: string): string {
-  return `/github-assets/${[owner, repoName, commitOid, ...assetPath.split('/')].map(encodeURIComponent).join('/')}`
 }

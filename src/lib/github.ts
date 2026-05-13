@@ -229,56 +229,6 @@ export async function githubRestJson<T> (url: string): Promise<{ data: T, link: 
   throw new Error(`GitHub REST request failed for ${url} after retries`)
 }
 
-export async function githubBuffer (url: string): Promise<Buffer> {
-  const attempts = maxAttempts()
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    await throttle()
-    let response: Response
-    try {
-      response = await fetch(url, {
-        headers: {
-          accept: 'application/octet-stream',
-          ...authHeaders()
-        }
-      })
-    } catch (error) {
-      if (attempt < attempts - 1) {
-        const delay = networkRetryDelay(attempt)
-        console.warn(`[github] asset network error; retrying in ${delay} ms: ${(error as Error).message}`)
-        await sleep(delay)
-        continue
-      }
-      throw error
-    }
-
-    if (response.ok) {
-      try {
-        return Buffer.from(await response.arrayBuffer())
-      } catch (error) {
-        if (attempt < attempts - 1) {
-          const delay = networkRetryDelay(attempt)
-          console.warn(`[github] asset response read failed; retrying in ${delay} ms: ${(error as Error).message}`)
-          await sleep(delay)
-          continue
-        }
-        throw error
-      }
-    }
-
-    const responseBody = await responseText(response)
-    if (shouldRetry(response) && attempt < attempts - 1) {
-      const delay = retryDelay(response, responseBody, attempt)
-      console.warn(`[github] asset request returned ${response.status}; retrying in ${delay} ms`)
-      await sleep(delay)
-      continue
-    }
-
-    throw new Error(`GitHub asset request failed for ${url}: ${response.status} ${responseBody}`)
-  }
-
-  throw new Error(`GitHub asset request failed for ${url} after retries`)
-}
-
 async function responseText (response: Response): Promise<string> {
   try {
     return await response.text()

@@ -16,10 +16,9 @@ import { githubGraphql, githubRestJson } from './github'
 import { canonicalizeAssetHtml, proxyAssetUrl } from './asset-proxy'
 import {
   README_ASSET_VERSION,
-  refreshReadmeImageAssets,
+  normalizeReadmeAssetHtml,
   renderReadmeHtml,
-  replacePrivateImages,
-  restoreMirroredImages
+  replacePrivateImages
 } from './markdown'
 import { REPOSITORY_DETAIL_QUERY, repositoryDetailBatchQuery } from './queries'
 import type {
@@ -610,34 +609,22 @@ async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string
     return
   }
 
-  await restoreMirroredImages(record.readmeHTML)
-  if (
-    record.readmeAssetVersion === README_ASSET_VERSION ||
-    !record.readme ||
-    !record.readmeHTML.includes('\\')
-  ) {
-    if (changed) await writeJson(dataPath, record)
-    return
+  if (record.readmeAssetVersion !== README_ASSET_VERSION) {
+    record.readmeAssetVersion = README_ASSET_VERSION
+    changed = true
   }
 
-  const refreshedHtml = await refreshReadmeImageAssets(
-    OWNER,
-    record.name,
-    record.readme,
-    record.readmeHTML,
-    record.defaultBranchOid || 'HEAD'
-  )
-
-  record.readmeHTML = refreshedHtml
-  record.readmeAssetVersion = README_ASSET_VERSION
-  changed = true
   if (changed) await writeJson(dataPath, record)
 }
 
 function refreshCachedHtmlAssets (record: ModuleRecord): boolean {
   let changed = false
 
-  const readmeHTML = canonicalizeAssetHtml(replacePrivateImages(record.readme, record.readmeHTML))
+  const readmeHTML = normalizeReadmeAssetHtml(record.readme, record.readmeHTML, {
+    owner: OWNER,
+    repoName: record.name,
+    commitOid: record.defaultBranchOid || 'HEAD'
+  })
   if (readmeHTML !== record.readmeHTML) {
     record.readmeHTML = readmeHTML
     changed = true
@@ -661,7 +648,11 @@ async function refreshRenderedReadmeHtml (record: ModuleRecord): Promise<void> {
   if (!await pathExists(htmlPath)) return
 
   const cachedHtml = await fs.readFile(htmlPath, 'utf8')
-  const refreshedHtml = canonicalizeAssetHtml(replacePrivateImages(record.readme, cachedHtml)) || cachedHtml
+  const refreshedHtml = normalizeReadmeAssetHtml(record.readme, cachedHtml, {
+    owner: OWNER,
+    repoName: record.name,
+    commitOid: record.defaultBranchOid || 'HEAD'
+  }) || cachedHtml
   if (refreshedHtml !== cachedHtml) await fs.writeFile(htmlPath, refreshedHtml, 'utf8')
 }
 

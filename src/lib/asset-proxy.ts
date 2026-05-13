@@ -343,7 +343,7 @@ function isImageLink ($: ReturnType<typeof load>, element: Parameters<ReturnType
   const imageUrl = link.find('img[src], source[srcset]').first().attr('src') || ''
   if (!imageUrl) return true
 
-  return sameGithubBlobTarget(href, imageUrl) || imageUrl.startsWith('/github-assets/') || looksLikeImageUrl(imageUrl)
+  return sameGithubBlobTarget(href, imageUrl) || looksLikeImageUrl(imageUrl)
 }
 
 function sameGithubBlobTarget (left: string, right: string): boolean {
