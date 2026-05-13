@@ -12,6 +12,8 @@ const ASSET_PROXY_ROUTE_PATTERNS = [
   /^\/avatars\//,
   /^\/release\//
 ]
+const MARKDOWN_URL_PATTERN = /https?:\/\/[^\s<>"'`()\[\]|]+/g
+const HTML_ASSET_ATTRS = ['src', 'href', 'poster', 'data-canonical-src'] as const
 
 interface AssetProxyConfig {
   baseUrl: string
@@ -54,8 +56,8 @@ export function rewriteAssetProxyHtml (html: string | null | undefined): string 
   if (!config) return canonicalHtml
 
   let changed = false
-  $('[src], [href], [poster]').each((_, element) => {
-    for (const attr of ['src', 'href', 'poster']) {
+  $('[src], [href], [poster], [data-canonical-src]').each((_, element) => {
+    for (const attr of HTML_ASSET_ATTRS) {
       const value = $(element).attr(attr)
       if (!value) continue
 
@@ -80,7 +82,39 @@ export function rewriteAssetProxyHtml (html: string | null | undefined): string 
     }
   })
 
+  $('*').contents().each((_, node) => {
+    if (node.type !== 'text' || !('data' in node)) return
+
+    const parent = node.parent
+    if (parent && 'name' in parent && ['code', 'pre', 'script', 'style'].includes(parent.name)) return
+
+    const rewritten = rewriteAssetProxyText(node.data, config, { allowGithubBlob: true })
+    if (rewritten === node.data) return
+
+    node.data = rewritten
+    changed = true
+  })
+
   return changed ? ($.root().html() || html) : html
+}
+
+export function rewriteAssetProxyMarkdown (markdown: string | null | undefined): string | null | undefined {
+  if (!markdown) return markdown
+
+  const config = assetProxyConfig()
+  if (!config) return markdown
+
+  return rewriteAssetProxyText(markdown, config, { allowGithubBlob: true })
+}
+
+function rewriteAssetProxyText (value: string, config: AssetProxyConfig, options: ProxyRouteOptions = {}): string {
+  return value.replace(MARKDOWN_URL_PATTERN, match => {
+    const [url, suffix] = splitMarkdownUrl(match)
+    const route = proxyRoute(url, options)
+    if (!route) return match
+
+    return `${signedAssetUrl(route, config)}${suffix}`
+  })
 }
 
 export function canonicalizeAssetHtml (html: string | null | undefined): string | null | undefined {
@@ -262,7 +296,7 @@ function canonicalSearch (searchParams?: URLSearchParams): string {
 }
 
 function githubRoutePath (pathname: string, options: ProxyRouteOptions): string | null {
-  if (pathname.startsWith('/user-attachments/assets/')) {
+  if (pathname.startsWith('/user-attachments/')) {
     return pathname
   }
 
@@ -332,6 +366,32 @@ function rewriteSrcset (srcset: string, config: AssetProxyConfig): string {
       return [signedAssetUrl(route, config), ...parts.slice(1)].join(' ')
     })
     .join(', ')
+}
+
+function splitMarkdownUrl (value: string): [string, string] {
+  let url = value
+  let suffix = ''
+
+  while (url && !canParseUrl(url)) {
+    suffix = `${url.at(-1) || ''}${suffix}`
+    url = url.slice(0, -1)
+  }
+
+  while (url && /[),.;:!?]$/.test(url) && canParseUrl(url.slice(0, -1))) {
+    suffix = `${url.at(-1) || ''}${suffix}`
+    url = url.slice(0, -1)
+  }
+
+  return [url, suffix]
+}
+
+function canParseUrl (value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
 }
 
 function isImageLink ($: ReturnType<typeof load>, element: Parameters<ReturnType<typeof load>>[0], href: string): boolean {

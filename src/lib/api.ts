@@ -1,4 +1,33 @@
-import type { ModuleRecord } from './types'
+import { proxyAssetUrl, rewriteAssetProxyHtml, rewriteAssetProxyMarkdown } from './asset-proxy'
+import type { ModuleRecord, ModuleRelease, ReleaseAsset } from './types'
+
+type ApiReleaseAsset = ReleaseAsset & {
+  originalDownloadUrl?: string
+}
+
+type ApiModuleRelease = ModuleRelease & {
+  releaseAssets?: ApiReleaseAsset[]
+}
+
+function apiReleaseAsset (asset: ReleaseAsset): ApiReleaseAsset {
+  const proxiedDownloadUrl = proxyAssetUrl(asset.downloadUrl)
+  if (!proxiedDownloadUrl) return asset
+
+  return {
+    ...asset,
+    originalDownloadUrl: asset.downloadUrl,
+    downloadUrl: proxiedDownloadUrl
+  }
+}
+
+function apiRelease (release: ModuleRelease): ApiModuleRelease {
+  return {
+    ...release,
+    description: rewriteAssetProxyMarkdown(release.description) || release.description,
+    descriptionHTML: rewriteAssetProxyHtml(release.descriptionHTML) || release.descriptionHTML,
+    releaseAssets: release.releaseAssets?.map(apiReleaseAsset)
+  }
+}
 
 export function moduleJson (module: ModuleRecord): Record<string, unknown> {
   const {
@@ -11,9 +40,14 @@ export function moduleJson (module: ModuleRecord): Record<string, unknown> {
     latestSnapshotRelease,
     ...publicModule
   } = module
+  const readme = rewriteAssetProxyMarkdown(module.readme) || module.readme
+  const readmeHTML = rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML
 
   return {
     ...publicModule,
+    readme,
+    readmeHTML,
+    releases: module.releases.map(apiRelease),
     collaborators: module.collaborators.map(author => ({
       login: author.login,
       name: author.name ?? null
@@ -37,7 +71,7 @@ export function moduleJson (module: ModuleRecord): Record<string, unknown> {
     childGitHubReadme: module.readmeHTML
       ? {
           childMarkdownRemark: {
-            html: module.readmeHTML
+            html: readmeHTML
           }
         }
       : null
@@ -62,14 +96,14 @@ export function modulesJson (modules: ModuleRecord[]): Array<Record<string, unkn
         latestSnapshotRelease.tagName !== latestBetaRelease?.tagName
         ? latestSnapshotRelease.tagName
         : undefined,
-      releases: latestRelease ? [latestRelease] : [],
+      releases: latestRelease ? [apiRelease(latestRelease)] : [],
       betaReleases: latestBetaRelease && latestBetaRelease.tagName !== latestRelease?.tagName
-        ? [latestBetaRelease]
+        ? [apiRelease(latestBetaRelease)]
         : undefined,
       snapshotReleases: latestSnapshotRelease &&
         latestSnapshotRelease.tagName !== latestRelease?.tagName &&
         latestSnapshotRelease.tagName !== latestBetaRelease?.tagName
-        ? [latestSnapshotRelease]
+        ? [apiRelease(latestSnapshotRelease)]
         : undefined,
       readme: undefined,
       readmeHTML: undefined,
