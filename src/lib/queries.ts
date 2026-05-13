@@ -121,7 +121,6 @@ fragment RepositoryDetail on Repository {
   readme: object(expression: "HEAD:README.md") {
     ... on Blob {
       oid
-      text
     }
   }
   summary: object(expression: "HEAD:SUMMARY") {
@@ -158,7 +157,6 @@ fragment RepositoryDetail on Repository {
     name
     url
     isDraft
-    description
     descriptionHTML
     createdAt
     publishedAt
@@ -180,7 +178,6 @@ fragment RepositoryDetail on Repository {
       name
       url
       isDraft
-      description
       descriptionHTML
       createdAt
       publishedAt

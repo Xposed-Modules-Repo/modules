@@ -5,7 +5,15 @@ type ApiReleaseAsset = ReleaseAsset & {
   originalDownloadUrl?: string
 }
 
-type ApiModuleRelease = ModuleRelease & {
+type CachedModuleRelease = ModuleRelease & {
+  description?: string | null
+}
+
+type CachedModuleRecord = ModuleRecord & {
+  readme?: string | null
+}
+
+type ApiModuleRelease = Omit<CachedModuleRelease, 'description'> & {
   releaseAssets?: ApiReleaseAsset[]
 }
 
@@ -20,44 +28,38 @@ function apiReleaseAsset (asset: ReleaseAsset): ApiReleaseAsset {
   }
 }
 
-function apiRelease (release: ModuleRelease): ApiModuleRelease {
+function apiRelease (release: CachedModuleRelease): ApiModuleRelease {
+  const { description, ...publicRelease } = release
+
   return {
-    ...release,
-    description: undefined,
-    descriptionHTML: rewriteAssetProxyHtml(release.descriptionHTML) || release.descriptionHTML,
+    ...publicRelease,
+    descriptionHTML: rewriteAssetProxyHtml(publicRelease.descriptionHTML) || publicRelease.descriptionHTML,
     releaseAssets: release.releaseAssets?.map(apiReleaseAsset)
   }
 }
 
-export function moduleJson (module: ModuleRecord): Record<string, unknown> {
+function publicModuleFields (module: ModuleRecord): Record<string, unknown> {
   const {
     fingerprint,
     isModule,
     defaultBranchOid,
     readmeOid,
+    readme,
+    readmeHTML,
+    readmeAssetVersion,
     latestRelease,
     latestBetaRelease,
     latestSnapshotRelease,
     ...publicModule
-  } = module
-  const readmeHTML = rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML
+  } = module as CachedModuleRecord
+
+  return publicModule
+}
+
+function latestReleaseTags (module: ModuleRecord): Record<string, unknown> {
+  const { latestRelease, latestBetaRelease, latestSnapshotRelease } = module
 
   return {
-    ...publicModule,
-    readme: undefined,
-    readmeHTML,
-    releases: module.releases.map(apiRelease),
-    collaborators: module.collaborators.map(author => ({
-      login: author.login,
-      name: author.name ?? null
-    })),
-    additionalAuthors: module.additionalAuthors
-      ? module.additionalAuthors.map(author => ({
-          type: author.type ?? null,
-          name: author.name ?? null,
-          link: author.link ?? null
-        }))
-      : null,
     latestRelease: latestRelease?.tagName,
     latestBetaRelease: latestBetaRelease && latestBetaRelease.tagName !== latestRelease?.tagName
       ? latestBetaRelease.tagName
@@ -66,8 +68,38 @@ export function moduleJson (module: ModuleRecord): Record<string, unknown> {
       latestSnapshotRelease.tagName !== latestRelease?.tagName &&
       latestSnapshotRelease.tagName !== latestBetaRelease?.tagName
       ? latestSnapshotRelease.tagName
-      : undefined,
-    childGitHubReadme: module.readmeHTML
+      : undefined
+  }
+}
+
+function apiCollaborators (module: ModuleRecord): Array<Record<string, string | null>> {
+  return module.collaborators.map(author => ({
+    login: author.login,
+    name: author.name ?? null
+  }))
+}
+
+function apiAdditionalAuthors (module: ModuleRecord): Array<Record<string, string | null>> | null {
+  return module.additionalAuthors
+    ? module.additionalAuthors.map(author => ({
+        type: author.type ?? null,
+        name: author.name ?? null,
+        link: author.link ?? null
+      }))
+    : null
+}
+
+export function moduleJson (module: ModuleRecord): Record<string, unknown> {
+  const readmeHTML = rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML
+
+  return {
+    ...publicModuleFields(module),
+    readmeHTML,
+    releases: module.releases.map(apiRelease),
+    collaborators: apiCollaborators(module),
+    additionalAuthors: apiAdditionalAuthors(module),
+    ...latestReleaseTags(module),
+    childGitHubReadme: readmeHTML
       ? {
           childMarkdownRemark: {
             html: readmeHTML
@@ -79,22 +111,15 @@ export function moduleJson (module: ModuleRecord): Record<string, unknown> {
 
 export function modulesJson (modules: ModuleRecord[]): Array<Record<string, unknown>> {
   return modules.map(module => {
-    const publicModule = moduleJson(module)
     const latestRelease = module.latestRelease
     const latestBetaRelease = module.latestBetaRelease
     const latestSnapshotRelease = module.latestSnapshotRelease
 
     return {
-      ...publicModule,
-      latestRelease: latestRelease?.tagName,
-      latestBetaRelease: latestBetaRelease && latestBetaRelease.tagName !== latestRelease?.tagName
-        ? latestBetaRelease.tagName
-        : undefined,
-      latestSnapshotRelease: latestSnapshotRelease &&
-        latestSnapshotRelease.tagName !== latestRelease?.tagName &&
-        latestSnapshotRelease.tagName !== latestBetaRelease?.tagName
-        ? latestSnapshotRelease.tagName
-        : undefined,
+      ...publicModuleFields(module),
+      collaborators: apiCollaborators(module),
+      additionalAuthors: apiAdditionalAuthors(module),
+      ...latestReleaseTags(module),
       releases: latestRelease ? [apiRelease(latestRelease)] : [],
       betaReleases: latestBetaRelease && latestBetaRelease.tagName !== latestRelease?.tagName
         ? [apiRelease(latestBetaRelease)]
@@ -103,10 +128,7 @@ export function modulesJson (modules: ModuleRecord[]): Array<Record<string, unkn
         latestSnapshotRelease.tagName !== latestRelease?.tagName &&
         latestSnapshotRelease.tagName !== latestBetaRelease?.tagName
         ? [apiRelease(latestSnapshotRelease)]
-        : undefined,
-      readme: undefined,
-      readmeHTML: undefined,
-      childGitHubReadme: undefined
+        : undefined
     }
   })
 }

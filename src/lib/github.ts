@@ -250,3 +250,11 @@ export async function renderGithubMarkdown (owner: string, repoName: string, mar
     })
   })
 }
+
+export async function fetchGithubReadmeHtml (owner: string, repoName: string): Promise<string> {
+  return githubText(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/readme`, {
+    headers: {
+      accept: 'application/vnd.github.html+json'
+    }
+  })
+}

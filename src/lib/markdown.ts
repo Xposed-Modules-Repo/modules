@@ -8,10 +8,10 @@ import {
   pathExists,
   renderedReadmePath
 } from './cache'
-import { renderGithubMarkdown } from './github'
+import { fetchGithubReadmeHtml, renderGithubMarkdown } from './github'
 import { canonicalizeAssetHtml } from './asset-proxy'
 
-export const README_ASSET_VERSION = 3
+export const README_ASSET_VERSION = 4
 
 interface ReadmeAssetContext {
   owner: string
@@ -23,9 +23,16 @@ const PUBLIC_IMAGE_PATTERNS = [
   /https:\/\/github\.com\/[a-zA-Z0-9-]+\/[\w.-]+\/assets\/\d+\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/g,
   /https:\/\/github\.com\/user-attachments\/assets\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})/g
 ]
+const PRIVATE_IMAGE_PATTERN = /https:\/\/private-user-images\.githubusercontent\.com\/\d+\/\d+-([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})\.[^"'<>]+/g
 
 export function replacePrivateImages (markdown: string | null | undefined, html: string | null | undefined): string | null | undefined {
-  if (!markdown || !html) return html
+  if (!html) return html
+
+  let result = html.replaceAll(PRIVATE_IMAGE_PATTERN, (_, uuid: string) => {
+    return `https://github.com/user-attachments/assets/${uuid}`
+  })
+
+  if (!markdown) return result
 
   const publicMatches = new Map<string, string>()
   for (const pattern of PUBLIC_IMAGE_PATTERNS) {
@@ -34,7 +41,6 @@ export function replacePrivateImages (markdown: string | null | undefined, html:
     }
   }
 
-  let result = html
   for (const [publicUrl, uuid] of publicMatches) {
     const privatePattern = new RegExp(`https:\\/\\/private-user-images\\.githubusercontent\\.com\\/\\d+\\/\\d+-${uuid}\\..*?(?=")`, 'g')
     result = result.replaceAll(privatePattern, publicUrl)
@@ -58,7 +64,7 @@ export function normalizeReadmeAssetHtml (
 export async function renderReadmeHtml (
   owner: string,
   repoName: string,
-  markdown: string,
+  markdown: string | null | undefined,
   readmeOid: string,
   commitOid: string
 ): Promise<string> {
@@ -71,12 +77,31 @@ export async function renderReadmeHtml (
     return refreshedHtml
   }
 
-  let html = await renderMarkdown(owner, repoName, markdown)
+  let html = await renderReadme(owner, repoName, markdown)
   html = normalizeReadmeAssetHtml(markdown, html, context) || html
 
   await ensureDir(path.dirname(htmlPath))
   await fs.writeFile(htmlPath, html, 'utf8')
   return html
+}
+
+async function renderReadme (owner: string, repoName: string, markdown: string | null | undefined): Promise<string> {
+  if (process.env.USE_GITHUB_README_HTML_API !== 'false') {
+    try {
+      return unwrapReadmeHtml(await fetchGithubReadmeHtml(owner, repoName))
+    } catch (error) {
+      console.warn(`[markdown] GitHub README HTML API failed for ${repoName}; using markdown renderer fallback: ${(error as Error).message}`)
+    }
+  }
+
+  if (!markdown) throw new Error(`README markdown is unavailable for ${repoName}`)
+  return renderMarkdown(owner, repoName, markdown)
+}
+
+function unwrapReadmeHtml (html: string): string {
+  const $ = load(html, {}, false)
+  const article = $('article.markdown-body').first()
+  return article.length ? (article.html() || html) : html
 }
 
 function restoreBundledAssetUrls (html: string): string {

@@ -28,7 +28,6 @@ export default function SearchBox (): ReactElement {
           record.description,
           record.summary,
           record.readmeExcerpt,
-          record.release,
           record.authors
         ].filter(Boolean).join(' '))
 

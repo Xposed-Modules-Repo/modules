@@ -22,7 +22,6 @@ export interface ModuleRelease {
   name?: string | null
   url: string
   isDraft: boolean
-  description?: string | null
   descriptionHTML?: string | null
   createdAt: string
   publishedAt?: string | null
@@ -41,7 +40,6 @@ export interface ModuleRecord {
   url: string
   homepageUrl?: string | null
   collaborators: Collaborator[]
-  readme?: string | null
   readmeHTML?: string | null
   readmeAssetVersion?: number
   readmeOid?: string | null
@@ -91,7 +89,6 @@ export interface SearchRecord {
   description?: string | null
   summary?: string | null
   readmeExcerpt?: string | null
-  release?: string | null
   authors?: string | null
 }
 

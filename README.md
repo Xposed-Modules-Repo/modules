@@ -24,8 +24,9 @@ Useful environment variables:
 - `REPO`: optional single dirty repo, for example `Xposed-Modules-Repo/com.example`.
 - `DIRTY_REPOS`: optional comma-separated dirty repo names or full names.
 - `MODULES_CACHE_DIR`: build cache directory, defaults to `node_modules/.astro/modules-cache`.
-- `GITHUB_DETAIL_BATCH_SIZE`: number of repositories fetched per GraphQL detail query, defaults to `10`.
+- `GITHUB_DETAIL_BATCH_SIZE`: number of repositories fetched per GraphQL detail query, defaults to `20`.
 - `GITHUB_REQUEST_DELAY_MS`: delay between GitHub requests, defaults to `750`.
+- `USE_GITHUB_README_HTML_API=false`: skip GitHub's rendered README HTML API and render README markdown locally or via the Markdown API fallback.
 - `USE_GITHUB_MARKDOWN_API=false`: skip GitHub Markdown API and use local fallback rendering.
 - `CMARK_GFM_BIN`: optional path to a local `cmark-gfm` binary.
 - `DIRTY_REPOS_ENDPOINT`: optional Worker endpoint that returns queued dirty repositories.

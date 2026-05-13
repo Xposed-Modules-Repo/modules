@@ -33,6 +33,7 @@ import type {
 
 export const PAGE_SIZE = 30
 export const OWNER = process.env.GITHUB_ORG || 'Xposed-Modules-Repo'
+const GITHUB_ASSET_TEXT_URL_PATTERN = /https?:\/\/(?:raw\.githubusercontent\.com|user-images\.githubusercontent\.com|avatars\.githubusercontent\.com|camo\.githubusercontent\.com|github\.com\/(?:user-attachments|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/assets\/))[^\s<>'"`()[\]|]+/g
 
 let siteDataPromise: Promise<SiteData> | null = null
 
@@ -57,7 +58,6 @@ interface ReleaseNode {
   name?: string | null
   url: string
   isDraft: boolean
-  description?: string | null
   descriptionHTML?: string | null
   createdAt: string
   publishedAt?: string | null
@@ -114,6 +114,14 @@ interface HydrationTask {
   repo: RepoNode
   fingerprint: string
   dataPath: string
+}
+
+type LegacyModuleRecord = ModuleRecord & {
+  readme?: string | null
+}
+
+type LegacyModuleRelease = ModuleRelease & {
+  description?: string | null
 }
 
 export async function getSiteData (): Promise<SiteData> {
@@ -220,7 +228,6 @@ function sampleSiteData (): SiteData {
     url: 'https://github.com/Xposed-Modules-Repo/com.example.module',
     homepageUrl: 'https://github.com/Xposed-Modules-Repo/com.example.module',
     collaborators: [{ login: 'example', name: 'Example Author', avatarUrl: 'https://avatars.githubusercontent.com/example' }],
-    readme: '# Example Module\n\nThis page is generated from sample data.',
     readmeOid: 'sample-readme',
     readmeHTML: '<h1>Example Module</h1><p>This page is generated from sample data.</p>',
     readmeAssetVersion: README_ASSET_VERSION,
@@ -233,7 +240,6 @@ function sampleSiteData (): SiteData {
       name: '1.0.0',
       url: 'https://github.com/Xposed-Modules-Repo/com.example.module/releases/tag/1-1.0.0',
       isDraft: false,
-      description: 'Initial release',
       descriptionHTML: '<p>Initial release</p>',
       createdAt: '2026-01-01T00:00:00Z',
       publishedAt: '2026-01-01T00:00:00Z',
@@ -430,9 +436,9 @@ async function fetchRepositoryDetails (names: string[]): Promise<Map<string, Rep
 }
 
 function detailBatchSize (): number {
-  const value = Number.parseInt(process.env.GITHUB_DETAIL_BATCH_SIZE || '10', 10)
-  if (!Number.isFinite(value)) return 10
-  return Math.max(1, Math.min(20, value))
+  const value = Number.parseInt(process.env.GITHUB_DETAIL_BATCH_SIZE || '20', 10)
+  if (!Number.isFinite(value)) return 20
+  return Math.max(1, Math.min(50, value))
 }
 
 function chunkArray<T> (items: T[], size: number): T[][] {
@@ -455,7 +461,6 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
       name: node.name,
       avatarUrl: node.avatarUrl
     })),
-    readme: repo.readme?.text,
     readmeOid: repo.readme?.oid,
     readmeHTML: null,
     summary: repo.summary?.text ? truncate(repo.summary.text.trim(), 512) : null,
@@ -489,15 +494,19 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
     assignLatestReleases(record)
   }
 
-  if (record.readme && record.readmeOid) {
-    record.readmeHTML = await renderReadmeHtml(
-      OWNER,
-      record.name,
-      record.readme,
-      record.readmeOid,
-      record.defaultBranchOid || 'HEAD'
-    )
-    record.readmeAssetVersion = README_ASSET_VERSION
+  if (record.readmeOid) {
+    try {
+      record.readmeHTML = await renderReadmeHtml(
+        OWNER,
+        record.name,
+        repo.readme?.text,
+        record.readmeOid,
+        record.defaultBranchOid || 'HEAD'
+      )
+      record.readmeAssetVersion = README_ASSET_VERSION
+    } catch (error) {
+      console.warn(`[repo] README render failed for ${repo.name}: ${(error as Error).message}`)
+    }
   }
 
   console.log(`[repo] ${repo.name}, module=${record.isModule}`)
@@ -522,8 +531,7 @@ function normalizeReleases (repo: RepoNode): ModuleRelease[] {
       name: release.name,
       url: release.url,
       isDraft: release.isDraft,
-      description: release.description,
-      descriptionHTML: canonicalizeAssetHtml(replacePrivateImages(release.description, release.descriptionHTML)),
+      descriptionHTML: canonicalizeAssetHtml(replacePrivateImages(null, release.descriptionHTML)),
       createdAt: release.createdAt,
       publishedAt: release.publishedAt,
       updatedAt: release.updatedAt,
@@ -578,7 +586,6 @@ function minimalRepositoryRecord (repo: RepoNode, fingerprint: string): ModuleRe
     url: repo.url,
     homepageUrl: repo.homepageUrl,
     collaborators: [],
-    readme: null,
     readmeOid: null,
     readmeHTML: null,
     summary: null,
@@ -602,8 +609,15 @@ function minimalRepositoryRecord (repo: RepoNode, fingerprint: string): ModuleRe
 }
 
 async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string): Promise<void> {
-  let changed = refreshCachedHtmlAssets(record)
-  await refreshRenderedReadmeHtml(record)
+  const cachedReadme = (record as LegacyModuleRecord).readme
+  let changed = refreshCachedHtmlAssets(record, cachedReadme)
+  await refreshRenderedReadmeHtml(record, cachedReadme)
+
+  if ('readme' in record) {
+    delete (record as LegacyModuleRecord).readme
+    changed = true
+  }
+
   if (!record.readmeHTML) {
     if (changed) await writeJson(dataPath, record)
     return
@@ -617,10 +631,10 @@ async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string
   if (changed) await writeJson(dataPath, record)
 }
 
-function refreshCachedHtmlAssets (record: ModuleRecord): boolean {
+function refreshCachedHtmlAssets (record: ModuleRecord, cachedReadme?: string | null): boolean {
   let changed = false
 
-  const readmeHTML = normalizeReadmeAssetHtml(record.readme, record.readmeHTML, {
+  const readmeHTML = normalizeReadmeAssetHtml(cachedReadme, record.readmeHTML, {
     owner: OWNER,
     repoName: record.name,
     commitOid: record.defaultBranchOid || 'HEAD'
@@ -641,14 +655,14 @@ function refreshCachedHtmlAssets (record: ModuleRecord): boolean {
   return changed
 }
 
-async function refreshRenderedReadmeHtml (record: ModuleRecord): Promise<void> {
-  if (!record.readme || !record.readmeOid) return
+async function refreshRenderedReadmeHtml (record: ModuleRecord, cachedReadme?: string | null): Promise<void> {
+  if (!record.readmeOid) return
 
   const htmlPath = renderedReadmePath(record.name, record.readmeOid)
   if (!await pathExists(htmlPath)) return
 
   const cachedHtml = await fs.readFile(htmlPath, 'utf8')
-  const refreshedHtml = normalizeReadmeAssetHtml(record.readme, cachedHtml, {
+  const refreshedHtml = normalizeReadmeAssetHtml(cachedReadme, cachedHtml, {
     owner: OWNER,
     repoName: record.name,
     commitOid: record.defaultBranchOid || 'HEAD'
@@ -660,9 +674,15 @@ function refreshCachedReleaseAssets (release: ModuleRelease | undefined): boolea
   if (!release || typeof release !== 'object') return false
 
   let changed = false
-  const descriptionHTML = canonicalizeAssetHtml(replacePrivateImages(release.description, release.descriptionHTML))
+  const cachedRelease = release as LegacyModuleRelease
+  const descriptionHTML = canonicalizeAssetHtml(replacePrivateImages(cachedRelease.description, release.descriptionHTML))
   if (descriptionHTML !== release.descriptionHTML) {
     release.descriptionHTML = descriptionHTML
+    changed = true
+  }
+
+  if ('description' in release) {
+    delete cachedRelease.description
     changed = true
   }
 
@@ -844,7 +864,6 @@ function toSearchRecord (module: ModuleRecord): SearchRecord {
     description: module.description,
     summary: module.summary,
     readmeExcerpt: excerptFromHtml(module.readmeHTML, 250),
-    release: module.releases[0]?.description || null,
     authors: [
       ...module.collaborators.map(author => `${author.name || author.login} (@${author.login})`),
       ...(module.additionalAuthors || []).map(author => author.name || author.link || '')
@@ -854,6 +873,9 @@ function toSearchRecord (module: ModuleRecord): SearchRecord {
 
 function excerptFromHtml (html?: string | null, length = 250): string | null {
   if (!html) return null
-  const text = load(html).text().replace(/\s+/g, ' ').trim()
+  const text = load(html).text()
+    .replace(GITHUB_ASSET_TEXT_URL_PATTERN, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
   return text ? truncate(text, length) : null
 }
