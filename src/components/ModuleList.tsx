@@ -121,10 +121,22 @@ export default function ModuleList ({
           const title = module.description || module.name
           const summary = module.summary?.trim()
           const labels = releaseLabels(module)
+          const contributorAvatarUrl = module.firstContributorAvatarUrl
 
           return (
             <article className="module-list-row" key={module.name}>
-              <RepoIcon className="module-list-icon" size={16} />
+              {contributorAvatarUrl
+                ? (
+                  <img
+                    className="module-list-avatar"
+                    src={contributorAvatarUrl}
+                    alt=""
+                    title={module.firstContributor || undefined}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  )
+                : <RepoIcon className="module-list-icon" size={16} />}
               <div className="module-list-main">
                 <div className="module-list-title-line">
                   <h2><a href={`/module/${module.name}/`}>{title}</a></h2>

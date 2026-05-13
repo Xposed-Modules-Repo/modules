@@ -115,6 +115,7 @@ fragment RepositoryDetail on Repository {
     nodes {
       login
       name
+      avatarUrl
     }
   }
   readme: object(expression: "HEAD:README.md") {

@@ -151,6 +151,16 @@ a {
   color: var(--color-fg-muted);
 }
 
+.module-list-avatar {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 50%;
+  background: var(--color-canvas-subtle);
+  object-fit: cover;
+}
+
 .module-list-main {
   min-width: 0;
 }

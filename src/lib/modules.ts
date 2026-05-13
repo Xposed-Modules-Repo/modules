@@ -13,7 +13,7 @@ import {
   writeManifest
 } from './cache'
 import { githubGraphql, githubRestJson } from './github'
-import { canonicalizeAssetHtml } from './asset-proxy'
+import { canonicalizeAssetHtml, proxyAssetUrl } from './asset-proxy'
 import {
   README_ASSET_VERSION,
   refreshReadmeImageAssets,
@@ -85,7 +85,7 @@ interface RepoNode {
     target?: GitObjectRef | null
   } | null
   collaborators?: {
-    nodes?: Array<{ login: string, name?: string | null }>
+    nodes?: Array<{ login: string, name?: string | null, avatarUrl?: string | null }>
   } | null
   readme?: BlobRef | null
   summary?: BlobRef | null
@@ -220,7 +220,7 @@ function sampleSiteData (): SiteData {
     description: 'Example Module',
     url: 'https://github.com/Xposed-Modules-Repo/com.example.module',
     homepageUrl: 'https://github.com/Xposed-Modules-Repo/com.example.module',
-    collaborators: [{ login: 'example', name: 'Example Author' }],
+    collaborators: [{ login: 'example', name: 'Example Author', avatarUrl: 'https://avatars.githubusercontent.com/example' }],
     readme: '# Example Module\n\nThis page is generated from sample data.',
     readmeOid: 'sample-readme',
     readmeHTML: '<h1>Example Module</h1><p>This page is generated from sample data.</p>',
@@ -453,7 +453,8 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
     homepageUrl: repo.homepageUrl,
     collaborators: (repo.collaborators?.nodes || []).map(node => ({
       login: node.login,
-      name: node.name
+      name: node.name,
+      avatarUrl: node.avatarUrl
     })),
     readme: repo.readme?.text,
     readmeOid: repo.readme?.oid,
@@ -814,6 +815,13 @@ function compareModules (left: ModuleRecord, right: ModuleRecord): number {
 }
 
 function toListItem (module: ModuleRecord): ModuleListItem {
+  const firstContributor = module.collaborators[0]
+  const firstContributorAvatarUrl = firstContributor
+    ? proxyAssetUrl(firstContributor.avatarUrl || `https://avatars.githubusercontent.com/${firstContributor.login}`) ||
+      firstContributor.avatarUrl ||
+      `https://avatars.githubusercontent.com/${firstContributor.login}`
+    : null
+
   return {
     name: module.name,
     description: module.description,
@@ -823,6 +831,8 @@ function toListItem (module: ModuleRecord): ModuleListItem {
     sourceUrl: module.sourceUrl || module.url,
     updatedAt: module.updatedAt,
     stargazerCount: module.stargazerCount,
+    firstContributor: firstContributor?.name || firstContributor?.login || null,
+    firstContributorAvatarUrl,
     latestRelease: module.latestRelease?.tagName,
     latestBetaRelease: module.latestBetaRelease?.tagName !== module.latestRelease?.tagName
       ? module.latestBetaRelease?.tagName

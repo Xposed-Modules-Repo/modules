@@ -7,6 +7,7 @@ export interface Author {
 export interface Collaborator {
   login: string
   name?: string | null
+  avatarUrl?: string | null
 }
 
 export interface ReleaseAsset {
@@ -75,6 +76,8 @@ export interface ModuleListItem {
   sourceUrl?: string | null
   updatedAt: string
   stargazerCount?: number
+  firstContributor?: string | null
+  firstContributorAvatarUrl?: string | null
   latestRelease?: string
   latestBetaRelease?: string
   latestSnapshotRelease?: string
