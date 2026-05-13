@@ -19,6 +19,10 @@ interface AssetProxyConfig {
   timestampParam: string
 }
 
+interface ProxyRouteOptions {
+  allowGithubBlob?: boolean
+}
+
 export function proxyAssetUrl (value: string | null | undefined): string | null {
   if (!value) return null
 
@@ -47,7 +51,9 @@ export function rewriteAssetProxyHtml (html: string | null | undefined): string 
       const value = $(element).attr(attr)
       if (!value) continue
 
-      const routePath = proxyRoutePath(value)
+      const routePath = proxyRoutePath(value, {
+        allowGithubBlob: attr !== 'href' || isImageLink($, element, value)
+      })
       if (!routePath) continue
 
       $(element).attr(attr, signedAssetUrl(routePath, config))
@@ -145,7 +151,7 @@ function assetProxyConfig (): AssetProxyConfig | null {
   return { baseUrl, key, timestamp, signatureParam, timestampParam }
 }
 
-function proxyRoutePath (value: string): string | null {
+function proxyRoutePath (value: string, options: ProxyRouteOptions = {}): string | null {
   let url: URL
   try {
     url = new URL(value)
@@ -161,7 +167,7 @@ function proxyRoutePath (value: string): string | null {
     case 'user-images.githubusercontent.com':
       return `/user-images${url.pathname}`
     case 'github.com':
-      return githubRoutePath(url.pathname)
+      return githubRoutePath(url.pathname, options)
     default:
       return null
   }
@@ -217,7 +223,7 @@ function canonicalRouteUrl (pathname: string): string | null {
   return null
 }
 
-function githubRoutePath (pathname: string): string | null {
+function githubRoutePath (pathname: string, options: ProxyRouteOptions): string | null {
   if (pathname.startsWith('/user-attachments/assets/')) {
     return pathname
   }
@@ -229,6 +235,11 @@ function githubRoutePath (pathname: string): string | null {
 
   const parts = pathname.split('/').filter(Boolean)
   if (parts.length >= 5 && parts[2] === 'raw') {
+    const [owner, repo, , ...assetParts] = parts
+    return `/raw/${[owner, repo, ...assetParts].join('/')}`
+  }
+
+  if (options.allowGithubBlob && parts.length >= 5 && parts[2] === 'blob') {
     const [owner, repo, , ...assetParts] = parts
     return `/raw/${[owner, repo, ...assetParts].join('/')}`
   }
@@ -259,12 +270,45 @@ function rewriteSrcset (srcset: string, config: AssetProxyConfig): string {
       const parts = entry.trim().split(/\s+/)
       if (!parts[0]) return entry
 
-      const routePath = proxyRoutePath(parts[0])
+      const routePath = proxyRoutePath(parts[0], { allowGithubBlob: true })
       if (!routePath) return entry.trim()
 
       return [signedAssetUrl(routePath, config), ...parts.slice(1)].join(' ')
     })
     .join(', ')
+}
+
+function isImageLink ($: ReturnType<typeof load>, element: Parameters<ReturnType<typeof load>>[0], href: string): boolean {
+  if (!looksLikeImageUrl(href)) return false
+
+  const link = $(element)
+  if (!link.is('a')) return false
+
+  const imageUrl = link.find('img[src], source[srcset]').first().attr('src') || ''
+  if (!imageUrl) return true
+
+  return sameGithubBlobTarget(href, imageUrl) || imageUrl.startsWith('/github-assets/') || looksLikeImageUrl(imageUrl)
+}
+
+function sameGithubBlobTarget (left: string, right: string): boolean {
+  try {
+    const leftUrl = new URL(left)
+    const rightUrl = new URL(right)
+    return leftUrl.hostname === 'github.com' &&
+      rightUrl.hostname === 'github.com' &&
+      leftUrl.pathname === rightUrl.pathname
+  } catch {
+    return false
+  }
+}
+
+function looksLikeImageUrl (value: string): boolean {
+  try {
+    const pathname = new URL(value).pathname.toLowerCase()
+    return /\.(avif|gif|jpe?g|png|svg|webp)(?:$|[?#])/.test(pathname)
+  } catch {
+    return false
+  }
 }
 
 function canonicalizeSrcset (srcset: string): string {
