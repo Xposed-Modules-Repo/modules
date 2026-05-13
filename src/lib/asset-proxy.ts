@@ -10,8 +10,7 @@ const ASSET_PROXY_ROUTE_PATTERNS = [
   /^\/user-images\//,
   /^\/user-attachments\//,
   /^\/avatars\//,
-  /^\/release\//,
-  /^\/[^/]+\/[^/]+\/releases\/download\//
+  /^\/release\//
 ]
 
 interface AssetProxyConfig {
@@ -24,6 +23,7 @@ interface AssetProxyConfig {
 
 interface ProxyRouteOptions {
   allowGithubBlob?: boolean
+  allowReleaseDownload?: boolean
 }
 
 interface ProxyRoute {
@@ -37,7 +37,7 @@ export function proxyAssetUrl (value: string | null | undefined): string | null 
   const config = assetProxyConfig()
   if (!config) return null
 
-  const route = proxyRoute(value)
+  const route = proxyRoute(value, { allowReleaseDownload: true })
   if (!route) return null
 
   return signedAssetUrl(route, config)
@@ -248,10 +248,6 @@ function canonicalRouteUrl (pathname: string, searchParams?: URLSearchParams): s
     return `https://github.com/${pathname.slice('/release/'.length)}${canonicalSearch(searchParams)}`
   }
 
-  if (isGithubReleaseDownloadPath(pathname.split('/').filter(Boolean))) {
-    return `https://github.com${pathname}${canonicalSearch(searchParams)}`
-  }
-
   return null
 }
 
@@ -286,7 +282,7 @@ function githubRoutePath (pathname: string, options: ProxyRouteOptions): string 
     return `/raw/${[owner, repo, ...assetParts].join('/')}`
   }
 
-  if (parts.length >= 6 && parts[2] === 'releases' && parts[3] === 'download') {
+  if (options.allowReleaseDownload && parts.length >= 6 && parts[2] === 'releases' && parts[3] === 'download') {
     return pathname
   }
 
@@ -295,10 +291,6 @@ function githubRoutePath (pathname: string, options: ProxyRouteOptions): string 
   }
 
   return null
-}
-
-function isGithubReleaseDownloadPath (parts: string[]): boolean {
-  return parts.length >= 6 && parts[2] === 'releases' && parts[3] === 'download'
 }
 
 function isGithubWorkflowBadgePath (parts: string[]): boolean {
