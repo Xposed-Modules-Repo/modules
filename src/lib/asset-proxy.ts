@@ -4,6 +4,7 @@ import { load } from 'cheerio'
 const DEFAULT_ASSET_PROXY_BASE = 'https://assets.lsposed.org'
 const DEFAULT_ASSET_PROXY_TIMESTAMP = '6a03bf00'
 const GITHUB_ATTACHMENT_PATTERN = /^\/[^/]+\/[^/]+\/assets\/\d+\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})$/
+const GITHUB_BARE_ASSET_PATTERN = /^\/assets\/([0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12})$/
 const ASSET_PROXY_ROUTE_PATTERNS = [
   /^\/raw\//,
   /^\/user-images\//,
@@ -183,6 +184,11 @@ function canonicalAssetUrl (value: string): string | null {
 
   if (url.hostname === 'camo.githubusercontent.com') return null
 
+  if (url.hostname === 'github.com') {
+    const attachmentMatch = url.pathname.match(GITHUB_ATTACHMENT_PATTERN) || url.pathname.match(GITHUB_BARE_ASSET_PATTERN)
+    if (attachmentMatch?.[1]) return `https://github.com/user-attachments/assets/${attachmentMatch[1]}`
+  }
+
   const proxyHost = assetProxyBaseHost()
   if (url.hostname === proxyHost && ASSET_PROXY_ROUTE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
     return canonicalRouteUrl(url.pathname)
@@ -228,7 +234,7 @@ function githubRoutePath (pathname: string, options: ProxyRouteOptions): string 
     return pathname
   }
 
-  const attachmentMatch = pathname.match(GITHUB_ATTACHMENT_PATTERN)
+  const attachmentMatch = pathname.match(GITHUB_ATTACHMENT_PATTERN) || pathname.match(GITHUB_BARE_ASSET_PATTERN)
   if (attachmentMatch?.[1]) {
     return `/user-attachments/assets/${attachmentMatch[1]}`
   }
