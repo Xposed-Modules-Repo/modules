@@ -282,7 +282,24 @@ function sampleSiteData (): SiteData {
 }
 
 async function loadInventory (cachedInventory: Record<string, RepoNode>, dirtyRepos: string[]): Promise<RepoNode[]> {
-  if (dirtyRepos.length && Object.keys(cachedInventory).length) {
+  try {
+    // Partial builds still need fresh REST inventory; otherwise one missed webhook can keep unrelated cached pages stale.
+    const repos = await fetchOrganizationInventory()
+    if (!dirtyRepos.length) return repos
+
+    const next = new Map(repos.map(repo => [repo.name, repo]))
+    for (const name of dirtyRepos) {
+      if (next.has(name)) continue
+
+      console.log(`[inventory] Dirty repo ${OWNER}/${name} was not in org inventory; refreshing directly`)
+      const repo = await fetchRepositoryInventory(name)
+      if (repo) next.set(name, repo)
+    }
+    return [...next.values()]
+  } catch (error) {
+    if (!dirtyRepos.length || !Object.keys(cachedInventory).length) throw error
+
+    console.warn(`[inventory] Full inventory refresh failed; falling back to dirty-only refresh: ${(error as Error).message}`)
     const next = new Map(Object.entries(cachedInventory))
     for (const name of dirtyRepos) {
       console.log(`[inventory] Refreshing dirty repo ${OWNER}/${name}`)
@@ -292,8 +309,6 @@ async function loadInventory (cachedInventory: Record<string, RepoNode>, dirtyRe
     }
     return [...next.values()]
   }
-
-  return fetchOrganizationInventory()
 }
 
 async function dirtyRepoNames (): Promise<string[]> {
