@@ -95,6 +95,96 @@ a {
   color: var(--color-fg-muted);
 }
 
+.submission-panel {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  background: var(--color-canvas-default);
+}
+
+.submission-copy {
+  margin-bottom: 24px;
+}
+
+.submission-copy h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.submission-copy p {
+  margin: 0;
+  color: var(--color-fg-muted);
+}
+
+.submission-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.submission-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.submission-label {
+  color: var(--color-fg-default);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.submission-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  background: var(--color-canvas-default);
+  color: var(--color-fg-default);
+  font: inherit;
+}
+
+.submission-control:focus {
+  border-color: var(--color-accent-emphasis);
+  outline: 2px solid var(--color-accent-muted);
+  outline-offset: -1px;
+}
+
+.submission-control[aria-invalid="true"] {
+  border-color: var(--color-danger-emphasis);
+}
+
+.submission-select {
+  appearance: auto;
+}
+
+.submission-textarea {
+  min-height: 136px;
+  resize: vertical;
+}
+
+.submission-error {
+  color: var(--color-danger-fg);
+  font-size: 12px;
+}
+
+.submission-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submission-actions .btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .module-list-shell {
   border: 1px solid var(--color-border-default);
   border-radius: 6px;
