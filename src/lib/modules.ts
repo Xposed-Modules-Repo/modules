@@ -23,6 +23,7 @@ import {
 import { REPOSITORY_DETAIL_QUERY, repositoryDetailBatchQuery } from './queries'
 import type {
   Author,
+  Collaborator,
   ModuleListItem,
   ModuleRecord,
   ModuleRelease,
@@ -34,6 +35,7 @@ import type {
 export const PAGE_SIZE = 30
 export const OWNER = process.env.GITHUB_ORG || 'Xposed-Modules-Repo'
 const GITHUB_ASSET_TEXT_URL_PATTERN = /https?:\/\/(?:raw\.githubusercontent\.com|user-images\.githubusercontent\.com|avatars\.githubusercontent\.com|camo\.githubusercontent\.com|github\.com\/(?:user-attachments|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/assets\/))[^\s<>'"`()[\]|]+/g
+const FORMAT_CONTROL_PATTERN = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g
 
 let siteDataPromise: Promise<SiteData> | null = null
 
@@ -171,14 +173,14 @@ async function buildSiteData (): Promise<SiteData> {
 
     if (!forceHydrate && cached?.fingerprint === fingerprint && await pathExists(dataPath)) {
       record = await readJson<ModuleRecord>(dataPath)
-      if (record) await restoreCachedReadmeAssets(record, dataPath)
+      if (record) await refreshCachedModuleRecord(record, dataPath)
     }
 
     if (!forceHydrate && !record && await pathExists(dataPath)) {
       const existing = await readJson<ModuleRecord>(dataPath)
       if (existing?.fingerprint === fingerprint) {
         record = existing
-        await restoreCachedReadmeAssets(record, dataPath)
+        await refreshCachedModuleRecord(record, dataPath)
       }
     }
 
@@ -471,11 +473,7 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
     description: repo.description,
     url: repo.url,
     homepageUrl: repo.homepageUrl,
-    collaborators: (repo.collaborators?.nodes || []).map(node => ({
-      login: node.login,
-      name: node.name,
-      avatarUrl: node.avatarUrl
-    })),
+    collaborators: normalizeCollaborators(repo.collaborators?.nodes),
     readmeOid: repo.readme?.oid,
     readmeHTML: null,
     summary: repo.summary?.text ? truncate(repo.summary.text.trim(), 512) : null,
@@ -623,9 +621,10 @@ function minimalRepositoryRecord (repo: RepoNode, fingerprint: string): ModuleRe
   }
 }
 
-async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string): Promise<void> {
+async function refreshCachedModuleRecord (record: ModuleRecord, dataPath: string): Promise<void> {
   const cachedReadme = (record as LegacyModuleRecord).readme
-  let changed = refreshCachedHtmlAssets(record, cachedReadme)
+  let changed = refreshCachedCollaborators(record)
+  if (refreshCachedHtmlAssets(record, cachedReadme)) changed = true
   await refreshRenderedReadmeHtml(record, cachedReadme)
 
   if ('readme' in record) {
@@ -644,6 +643,16 @@ async function restoreCachedReadmeAssets (record: ModuleRecord, dataPath: string
   }
 
   if (changed) await writeJson(dataPath, record)
+}
+
+function refreshCachedCollaborators (record: ModuleRecord): boolean {
+  let changed = false
+  record.collaborators = record.collaborators.map(author => {
+    const name = sanitizeCollaboratorName(author.name)
+    if (name !== author.name) changed = true
+    return { ...author, name }
+  })
+  return changed
 }
 
 function refreshCachedHtmlAssets (record: ModuleRecord, cachedReadme?: string | null): boolean {
@@ -794,6 +803,33 @@ function sortKeys (value: unknown): unknown {
 
 function sha256 (value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex')
+}
+
+function normalizeCollaborators (nodes?: Array<{ login: string, name?: string | null, avatarUrl?: string | null }> | null): Collaborator[] {
+  return (nodes || []).map(node => ({
+    login: node.login,
+    name: sanitizeCollaboratorName(node.name),
+    avatarUrl: node.avatarUrl
+  }))
+}
+
+function sanitizeCollaboratorName (name?: string | null): string | null {
+  if (!name) return null
+
+  const cleaned = name
+    .replace(FORMAT_CONTROL_PATTERN, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!cleaned || looksLikeStructuredPayload(cleaned)) return null
+  return cleaned
+}
+
+function looksLikeStructuredPayload (value: string): boolean {
+  if (/^[{\[]/.test(value)) return true
+  if (!/[{}\[\]":,]/.test(value)) return false
+
+  return /(?:^|["'{,])(?:status_code|message|data)(?:["'}:]|$)/i.test(value)
 }
 
 function parseAdditionalAuthors (text?: string | null): Author[] | null {
