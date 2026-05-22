@@ -1,8 +1,10 @@
 export interface Env {
   DEBOUNCER: DurableObjectNamespace
+  MODULES_CACHE?: D1Database
   GITHUB_WEBHOOK_SECRET?: string
   PAGES_DEPLOY_HOOK_URL?: string
   DIRTY_REPOS_TOKEN?: string
+  D1_CACHE_TOKEN?: string
   GITHUB_OWNER?: string
   QUIET_SECONDS?: string
   PENDING_TTL_SECONDS?: string
@@ -26,6 +28,11 @@ interface PendingRepos {
 
 export default {
   async fetch (request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url)
+    if (isD1QueryPath(url.pathname) && request.method === 'POST') {
+      return handleD1Query(request, env)
+    }
+
     const id = env.DEBOUNCER.idFromName('global')
     return env.DEBOUNCER.get(id).fetch(request)
   }
@@ -184,6 +191,71 @@ function timingSafeEqual (left: string, right: string): boolean {
 function isAuthorized (request: Request, token: string | undefined): boolean {
   if (!token) return true
   return request.headers.get('authorization') === `Bearer ${token}`
+}
+
+function isD1QueryPath (pathname: string): boolean {
+  return /^\/accounts\/[^/]+\/d1\/database\/[^/]+\/query$/.test(pathname)
+}
+
+async function handleD1Query (request: Request, env: Env): Promise<Response> {
+  if (!isAuthorized(request, env.D1_CACHE_TOKEN || env.DIRTY_REPOS_TOKEN)) {
+    return d1Json({ success: false, errors: [{ message: 'unauthorized' }], result: { success: false, results: [] } }, 401)
+  }
+
+  if (!env.MODULES_CACHE) {
+    return d1Json({ success: false, errors: [{ message: 'MODULES_CACHE is not configured' }], result: { success: false, results: [] } }, 500)
+  }
+
+  try {
+    const payload = await request.json() as { sql?: unknown, params?: unknown[] }
+    if (typeof payload.sql !== 'string') {
+      return d1Json({ success: false, errors: [{ message: 'sql is required' }], result: { success: false, results: [] } }, 400)
+    }
+
+    const params = Array.isArray(payload.params) ? payload.params : []
+    const statement = env.MODULES_CACHE.prepare(payload.sql).bind(...params)
+    const result = isReadQuery(payload.sql)
+      ? await statement.all()
+      : await statement.run()
+    const resultPayload = result as {
+      success?: boolean
+      results?: unknown[]
+      meta?: unknown
+      error?: string
+    }
+    const success = resultPayload.success !== false
+
+    return d1Json({
+      success,
+      result: {
+        success,
+        results: Array.isArray(resultPayload.results) ? resultPayload.results : [],
+        meta: resultPayload.meta
+      },
+      errors: resultPayload.error ? [{ message: resultPayload.error }] : [],
+      messages: []
+    }, success ? 200 : 500)
+  } catch (error) {
+    return d1Json({
+      success: false,
+      result: { success: false, results: [] },
+      errors: [{ message: (error as Error).message }]
+    }, 500)
+  }
+}
+
+function isReadQuery (sql: string): boolean {
+  return /^\s*(?:select|with|pragma)\b/i.test(sql)
+}
+
+function d1Json (body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store'
+    }
+  })
 }
 
 function json (body: unknown, status = 200): Response {

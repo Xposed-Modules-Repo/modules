@@ -6,6 +6,11 @@ compatibility_date = "2026-05-11"
 name = "DEBOUNCER"
 class_name = "WebhookDebouncer"
 
+[[d1_databases]]
+binding = "MODULES_CACHE"
+database_name = "modules-build-cache"
+database_id = "2e8c5345-20d5-45ea-ab91-2c87762a87d3"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["WebhookDebouncer"]
@@ -19,3 +24,4 @@ PENDING_TTL_SECONDS = "3600"
 # wrangler secret put GITHUB_WEBHOOK_SECRET -c worker/wrangler.toml
 # wrangler secret put PAGES_DEPLOY_HOOK_URL -c worker/wrangler.toml
 # wrangler secret put DIRTY_REPOS_TOKEN -c worker/wrangler.toml
+# Optional: wrangler secret put D1_CACHE_TOKEN -c worker/wrangler.toml

@@ -16,6 +16,8 @@ npx wrangler secret put PAGES_DEPLOY_HOOK_URL -c worker/wrangler.toml
 npx wrangler secret put DIRTY_REPOS_TOKEN -c worker/wrangler.toml
 ```
 
+The Worker also exposes a private D1 REST-compatible query endpoint for build-time cache access. It uses the `MODULES_CACHE` D1 binding in `wrangler.toml` and accepts `Authorization: Bearer <token>`, where the token is `D1_CACHE_TOKEN` if configured, otherwise `DIRTY_REPOS_TOKEN`.
+
 GitHub webhook URL:
 
 ```text
@@ -27,6 +29,9 @@ Cloudflare Pages build environment:
 ```text
 DIRTY_REPOS_ENDPOINT=https://<worker-host>/dirty?consume=1
 DIRTY_REPOS_TOKEN=<same token as worker secret>
+D1_CACHE_ENDPOINT=https://<worker-host>
+D1_CACHE_DATABASE_ID=2e8c5345-20d5-45ea-ab91-2c87762a87d3
+D1_CACHE_ACCOUNT_ID=8911df62bfddad67b7d7e84ae666bc87
 ```
 
 When the build starts, the Astro pipeline reads the dirty list. If the local cache is available, it refreshes only those repositories; if the cache is missing, it falls back to a full GitHub inventory scan.

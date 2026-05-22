@@ -52,7 +52,7 @@ function config (): D1Config | null {
 
   const accountId = process.env.D1_CACHE_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID
   const databaseId = process.env.D1_CACHE_DATABASE_ID
-  const apiToken = process.env.D1_CACHE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN
+  const apiToken = process.env.D1_CACHE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.DIRTY_REPOS_TOKEN
   if (!accountId || !databaseId || !apiToken) return null
 
   return {
