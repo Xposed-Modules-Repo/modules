@@ -1,3 +1,4 @@
+import { load } from 'cheerio'
 import { proxyAssetUrl, rewriteAssetProxyHtml } from './asset-proxy'
 import type { ModuleRecord, ModuleRelease, ReleaseAsset } from './types'
 
@@ -16,6 +17,10 @@ type CachedModuleRecord = ModuleRecord & {
 type ApiModuleRelease = Omit<CachedModuleRelease, 'description'> & {
   releaseAssets?: ApiReleaseAsset[]
 }
+
+const PUBLIC_ENV = (import.meta as ImportMeta & {
+  env?: Record<string, string | undefined>
+}).env
 
 function apiReleaseAsset (asset: ReleaseAsset): ApiReleaseAsset {
   const proxiedDownloadUrl = proxyAssetUrl(asset.downloadUrl)
@@ -36,6 +41,71 @@ function apiRelease (release: CachedModuleRelease): ApiModuleRelease {
     descriptionHTML: rewriteAssetProxyHtml(publicRelease.descriptionHTML) || publicRelease.descriptionHTML,
     releaseAssets: release.releaseAssets?.map(apiReleaseAsset)
   }
+}
+
+function publicEnv (name: string): string | null {
+  const value = process.env[name] || PUBLIC_ENV?.[name]
+  const trimmed = value?.trim()
+  return trimmed || null
+}
+
+function escapeHtmlAttribute (value: string): string {
+  return value.replace(/[&<>"']/g, character => {
+    switch (character) {
+      case '&':
+        return '&amp;'
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '"':
+        return '&quot;'
+      default:
+        return '&#39;'
+    }
+  })
+}
+
+function readmeAdHtml (): string | null {
+  const client = publicEnv('PUBLIC_GOOGLE_ADS_CLIENT') || publicEnv('PUBLIC_ADSENSE_CLIENT')
+  const slot = publicEnv('PUBLIC_AD_SLOT_README') || publicEnv('PUBLIC_AD_SLOT_TOP')
+  if (!client || !slot) return null
+
+  const escapedClient = escapeHtmlAttribute(client)
+  const escapedSlot = escapeHtmlAttribute(slot)
+  const scriptUrl = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`
+
+  return [
+    '<aside class="ad-slot ad-slot-readme" aria-label="Advertisement">',
+    `<script async src="${scriptUrl}" crossorigin="anonymous"></script>`,
+    '<ins class="adsbygoogle"',
+    ' style="display:block"',
+    ` data-ad-client="${escapedClient}"`,
+    ` data-ad-slot="${escapedSlot}"`,
+    ' data-ad-format="auto"',
+    ' data-full-width-responsive="true"></ins>',
+    '<script>(window.adsbygoogle = window.adsbygoogle || []).push({});</script>',
+    '</aside>'
+  ].join('')
+}
+
+function readmeHtmlWithAds (html: string | null | undefined): string | null | undefined {
+  if (!html) return html
+
+  const adHtml = readmeAdHtml()
+  if (!adHtml) return html
+
+  const $ = load(html, {}, false)
+  if ($('.ad-slot-readme').length) return html
+
+  const target = $('.markdown-heading, h1, h2, p, ul, ol, blockquote, pre, table').first()
+  if (target.length) {
+    target.after(adHtml)
+  } else {
+    $.root().prepend(adHtml)
+  }
+
+  return $.root().html() || html
 }
 
 function publicModuleFields (module: ModuleRecord): Record<string, unknown> {
@@ -90,7 +160,7 @@ function apiAdditionalAuthors (module: ModuleRecord): Array<Record<string, strin
 }
 
 export function moduleJson (module: ModuleRecord): Record<string, unknown> {
-  const readmeHTML = rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML
+  const readmeHTML = readmeHtmlWithAds(rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML)
 
   return {
     ...publicModuleFields(module),

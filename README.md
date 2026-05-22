@@ -33,6 +33,7 @@ Useful environment variables:
 - `DIRTY_REPOS_TOKEN`: bearer token for `DIRTY_REPOS_ENDPOINT`.
 - `PUBLIC_GOOGLE_ADS_CLIENT` or `PUBLIC_ADSENSE_CLIENT`: Google AdSense client id.
 - `PUBLIC_AD_SLOT_TOP`, `PUBLIC_AD_SLOT_SIDEBAR`, `PUBLIC_AD_SLOT_BOTTOM`: optional ad slot ids.
+- `PUBLIC_AD_SLOT_README`: optional ad slot id injected into module JSON README HTML; falls back to `PUBLIC_AD_SLOT_TOP`.
 - `USE_SAMPLE_DATA=true`: local verification mode that builds without GitHub API calls.
 
 ## Webhook Debounce Worker
