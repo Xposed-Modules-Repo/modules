@@ -7,11 +7,6 @@ name = "DEBOUNCER"
 class_name = "WebhookDebouncer"
 
 [[d1_databases]]
-binding = "MODULES_CACHE"
-database_name = "modules-build-cache"
-database_id = "2e8c5345-20d5-45ea-ab91-2c87762a87d3"
-
-[[d1_databases]]
 binding = "MODULES_METADATA_CACHE"
 database_name = "modules-build-metadata-cache"
 database_id = "65e5b2d4-c6c3-4c1f-8eb1-17dde6c8a41d"

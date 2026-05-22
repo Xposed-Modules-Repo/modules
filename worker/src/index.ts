@@ -1,6 +1,5 @@
 export interface Env {
   DEBOUNCER: DurableObjectNamespace
-  MODULES_CACHE?: D1Database
   MODULES_METADATA_CACHE?: D1Database
   MODULES_README_CACHE?: D1Database
   MODULES_RELEASE_CACHE?: D1Database
@@ -252,13 +251,13 @@ function d1DatabaseForRequest (url: URL, env: Env): D1Database | undefined {
   const databaseId = url.pathname.split('/')[5]
   switch (databaseId) {
     case '65e5b2d4-c6c3-4c1f-8eb1-17dde6c8a41d':
-      return env.MODULES_METADATA_CACHE || env.MODULES_CACHE
+      return env.MODULES_METADATA_CACHE
     case 'd65705d6-c416-43b7-9cc7-f8a7971ce464':
-      return env.MODULES_README_CACHE || env.MODULES_CACHE
+      return env.MODULES_README_CACHE
     case '998dbc82-4265-434d-a0ae-8b64cd708405':
-      return env.MODULES_RELEASE_CACHE || env.MODULES_CACHE
+      return env.MODULES_RELEASE_CACHE
     default:
-      return env.MODULES_CACHE
+      return undefined
   }
 }
 
