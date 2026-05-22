@@ -102,7 +102,7 @@ export async function renderReadmeHtml (
     oid: readmeOid,
     assetVersion: README_ASSET_VERSION,
     html
-  } satisfies ReadmeHtmlCacheEntry)
+  } satisfies ReadmeHtmlCacheEntry, { owner, repoName })
   return html
 }
 

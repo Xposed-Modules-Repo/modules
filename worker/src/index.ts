@@ -1,6 +1,9 @@
 export interface Env {
   DEBOUNCER: DurableObjectNamespace
   MODULES_CACHE?: D1Database
+  MODULES_METADATA_CACHE?: D1Database
+  MODULES_README_CACHE?: D1Database
+  MODULES_RELEASE_CACHE?: D1Database
   GITHUB_WEBHOOK_SECRET?: string
   PAGES_DEPLOY_HOOK_URL?: string
   DIRTY_REPOS_TOKEN?: string
@@ -30,7 +33,7 @@ export default {
   async fetch (request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
     if (isD1QueryPath(url.pathname) && request.method === 'POST') {
-      return handleD1Query(request, env)
+      return handleD1Query(request, env, url)
     }
 
     const id = env.DEBOUNCER.idFromName('global')
@@ -197,13 +200,14 @@ function isD1QueryPath (pathname: string): boolean {
   return /^\/accounts\/[^/]+\/d1\/database\/[^/]+\/query$/.test(pathname)
 }
 
-async function handleD1Query (request: Request, env: Env): Promise<Response> {
+async function handleD1Query (request: Request, env: Env, url: URL): Promise<Response> {
   if (!isAuthorized(request, env.D1_CACHE_TOKEN || env.DIRTY_REPOS_TOKEN)) {
     return d1Json({ success: false, errors: [{ message: 'unauthorized' }], result: { success: false, results: [] } }, 401)
   }
 
-  if (!env.MODULES_CACHE) {
-    return d1Json({ success: false, errors: [{ message: 'MODULES_CACHE is not configured' }], result: { success: false, results: [] } }, 500)
+  const database = d1DatabaseForRequest(url, env)
+  if (!database) {
+    return d1Json({ success: false, errors: [{ message: 'D1 database binding is not configured' }], result: { success: false, results: [] } }, 500)
   }
 
   try {
@@ -213,7 +217,7 @@ async function handleD1Query (request: Request, env: Env): Promise<Response> {
     }
 
     const params = Array.isArray(payload.params) ? payload.params : []
-    const statement = env.MODULES_CACHE.prepare(payload.sql).bind(...params)
+    const statement = database.prepare(payload.sql).bind(...params)
     const result = isReadQuery(payload.sql)
       ? await statement.all()
       : await statement.run()
@@ -241,6 +245,20 @@ async function handleD1Query (request: Request, env: Env): Promise<Response> {
       result: { success: false, results: [] },
       errors: [{ message: (error as Error).message }]
     }, 500)
+  }
+}
+
+function d1DatabaseForRequest (url: URL, env: Env): D1Database | undefined {
+  const databaseId = url.pathname.split('/')[5]
+  switch (databaseId) {
+    case '65e5b2d4-c6c3-4c1f-8eb1-17dde6c8a41d':
+      return env.MODULES_METADATA_CACHE || env.MODULES_CACHE
+    case 'd65705d6-c416-43b7-9cc7-f8a7971ce464':
+      return env.MODULES_README_CACHE || env.MODULES_CACHE
+    case '998dbc82-4265-434d-a0ae-8b64cd708405':
+      return env.MODULES_RELEASE_CACHE || env.MODULES_CACHE
+    default:
+      return env.MODULES_CACHE
   }
 }
 

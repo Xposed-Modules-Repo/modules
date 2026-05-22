@@ -1,3 +1,12 @@
+function positiveInt (value: string | undefined, fallback: number, max: number): number {
+  if (!value) return fallback
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, max) : fallback
+}
+
+const detailReleaseLimit = positiveInt(process.env.GITHUB_DETAIL_RELEASE_LIMIT, 5, 20)
+const detailReleaseAssetLimit = positiveInt(process.env.GITHUB_DETAIL_RELEASE_ASSET_LIMIT, 20, 50)
+
 export const REPOSITORY_INVENTORY_FRAGMENT = `
 fragment RepositoryInventory on Repository {
   name
@@ -165,7 +174,11 @@ fragment RepositoryDetail on Repository {
     updatedAt
     tagName
     isPrerelease
-    releaseAssets(first: 50) {
+    releaseAssets(first: ${detailReleaseAssetLimit}) {
+      totalCount
+      pageInfo {
+        hasNextPage
+      }
       nodes {
         name
         contentType
@@ -175,7 +188,11 @@ fragment RepositoryDetail on Repository {
       }
     }
   }
-  releases(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
+  releases(first: ${detailReleaseLimit}, orderBy: {field: CREATED_AT, direction: DESC}) {
+    totalCount
+    pageInfo {
+      hasNextPage
+    }
     nodes {
       id
       name
@@ -188,7 +205,11 @@ fragment RepositoryDetail on Repository {
       tagName
       isPrerelease
       isLatest
-      releaseAssets(first: 50) {
+      releaseAssets(first: ${detailReleaseAssetLimit}) {
+        totalCount
+        pageInfo {
+          hasNextPage
+        }
         nodes {
           name
           contentType

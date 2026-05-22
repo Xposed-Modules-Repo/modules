@@ -10,7 +10,10 @@
     "preview": "astro preview",
     "check": "astro check",
     "typecheck": "tsc --noEmit",
-    "d1:schema": "wrangler d1 execute modules-build-cache --remote --file d1/schema.sql",
+    "d1:schema": "npm run d1:schema:metadata && npm run d1:schema:readme && npm run d1:schema:release",
+    "d1:schema:metadata": "wrangler d1 execute modules-build-metadata-cache --remote --file d1/schema.metadata.sql",
+    "d1:schema:readme": "wrangler d1 execute modules-build-readme-cache --remote --file d1/schema.readme.sql",
+    "d1:schema:release": "wrangler d1 execute modules-build-release-cache --remote --file d1/schema.release.sql",
     "worker:dev": "wrangler dev -c worker/wrangler.toml",
     "worker:deploy": "wrangler deploy -c worker/wrangler.toml"
   },

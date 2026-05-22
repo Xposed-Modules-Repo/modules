@@ -176,16 +176,18 @@ export async function githubText (url: string, init: RequestInit = {}): Promise<
   throw new Error(`GitHub request failed for ${url} after retries`)
 }
 
-export async function githubRestJson<T> (url: string): Promise<{ data: T, link: string | null }> {
+export async function githubRestJson<T> (url: string, init: RequestInit = {}): Promise<{ data: T, link: string | null }> {
   const attempts = maxAttempts()
   for (let attempt = 0; attempt < attempts; attempt++) {
     await throttle()
     let response: Response
     try {
       response = await fetch(url, {
+        ...init,
         headers: {
           accept: 'application/vnd.github+json',
-          ...authHeaders()
+          ...authHeaders(),
+          ...(init.headers || {})
         }
       })
     } catch (error) {

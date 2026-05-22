@@ -23,6 +23,7 @@ import {
 import {
   cleanupD1Cache,
   deleteD1KeysByPrefix,
+  deleteD1ReleaseHtmlExcept,
   moduleLatestRecordCacheKey,
   moduleRecordCacheKey,
   moduleRecordCachePrefix,
@@ -32,7 +33,6 @@ import {
   readmeHtmlCacheKey,
   readmeHtmlCachePrefix,
   releaseHtmlCacheKey,
-  releaseHtmlCachePrefix,
   writeD1Text,
   writeD1Json
 } from './d1-cache'
@@ -86,6 +86,10 @@ interface ReleaseNode {
   isPrerelease: boolean
   isLatest?: boolean
   releaseAssets?: {
+    totalCount?: number
+    pageInfo?: {
+      hasNextPage?: boolean
+    } | null
     nodes?: AssetNode[]
   } | null
 }
@@ -114,6 +118,10 @@ interface RepoNode {
   additionalAuthors?: BlobRef | null
   latestRelease?: ReleaseNode | null
   releases?: {
+    totalCount?: number
+    pageInfo?: {
+      hasNextPage?: boolean
+    } | null
     nodes?: ReleaseNode[]
   } | null
 }
@@ -128,6 +136,30 @@ interface RestRepoNode {
   pushed_at?: string | null
   stargazers_count?: number
   default_branch?: string | null
+}
+
+interface RestReleaseAsset {
+  name: string
+  content_type?: string | null
+  browser_download_url: string
+  download_count?: number
+  size: number
+}
+
+interface RestReleaseNode {
+  id: number
+  node_id?: string | null
+  name?: string | null
+  html_url: string
+  draft: boolean
+  body?: string | null
+  body_html?: string | null
+  created_at: string
+  published_at?: string | null
+  updated_at: string
+  tag_name: string
+  prerelease: boolean
+  assets?: RestReleaseAsset[]
 }
 
 interface HydrationTask {
@@ -451,23 +483,26 @@ async function readStaleCachedModuleRecord (repoName: string, dataPath: string):
 async function writeD1CachedModuleRecord (repoName: string, record: ModuleRecord): Promise<void> {
   if (!record.isModule) return
 
-  const releaseHtmlKeys = await writeD1CachedReleaseHtml(repoName, record)
-  await deleteD1KeysByPrefix(
-    'release-html',
-    releaseHtmlCachePrefix(OWNER, repoName, RELEASE_HTML_ASSET_VERSION),
-    releaseHtmlKeys
-  )
+  const releaseHtmlIds = await writeD1CachedReleaseHtml(repoName, record)
+  await deleteD1ReleaseHtmlExcept(OWNER, repoName, releaseHtmlIds)
   await deleteD1KeysByPrefix(
     'readme-html',
     readmeHtmlCachePrefix(OWNER, repoName, README_ASSET_VERSION),
-    record.readmeOid ? [readmeHtmlCacheKey(OWNER, repoName, README_ASSET_VERSION)] : []
+    record.readmeOid ? [readmeHtmlCacheKey(OWNER, repoName, README_ASSET_VERSION)] : [],
+    { owner: OWNER, repoName }
   )
 
   const cacheRecord = d1CacheableModuleRecord(record)
   const recordKey = moduleRecordCacheKey(OWNER, repoName, record.fingerprint)
-  await writeD1Json(recordKey, 'module-record', cacheRecord)
-  await deleteD1KeysByPrefix('module-record', moduleRecordCachePrefix(OWNER, repoName), [recordKey])
-  await deleteD1KeysByPrefix('module-record-latest', moduleRecordCachePrefix(OWNER, repoName), [])
+  await writeD1Json(recordKey, 'module-record', cacheRecord, {
+    owner: OWNER,
+    repoName,
+    fingerprint: record.fingerprint
+  })
+  await deleteD1KeysByPrefix('module-record', moduleRecordCachePrefix(OWNER, repoName), [recordKey], {
+    owner: OWNER,
+    repoName
+  })
 }
 
 async function restoreD1CachedReadme (record: ModuleRecord): Promise<void> {
@@ -501,17 +536,22 @@ function d1CacheableModuleRecord (record: ModuleRecord): ModuleRecord {
 }
 
 async function writeD1CachedReleaseHtml (repoName: string, record: ModuleRecord): Promise<string[]> {
-  const keys = new Set<string>()
+  const releaseIds = new Set<string>()
 
   for (const release of record.releases) {
+    const releaseId = d1ReleaseId(release)
     const key = d1ReleaseHtmlKey(repoName, release)
-    if (!key || !release.descriptionHTML) continue
+    if (!releaseId || !key || !release.descriptionHTML) continue
 
-    keys.add(key)
-    await writeD1Text(key, 'release-html', release.descriptionHTML)
+    releaseIds.add(releaseId)
+    await writeD1Text(key, 'release-html', release.descriptionHTML, {
+      owner: OWNER,
+      repoName,
+      releaseId
+    })
   }
 
-  return [...keys]
+  return [...releaseIds]
 }
 
 async function restoreD1CachedReleaseHtml (record: ModuleRecord): Promise<void> {
@@ -543,9 +583,13 @@ function d1CacheableRelease (repoName: string, release: ModuleRelease): D1Cached
 }
 
 function d1ReleaseHtmlKey (repoName: string, release: ModuleRelease): string | null {
-  const releaseId = release.id || release.tagName
+  const releaseId = d1ReleaseId(release)
   if (!releaseId) return null
   return releaseHtmlCacheKey(OWNER, repoName, releaseId, RELEASE_HTML_ASSET_VERSION)
+}
+
+function d1ReleaseId (release: ModuleRelease): string | null {
+  return release.id || release.tagName || null
 }
 
 function uniqueRecordReleases (record: ModuleRecord): D1CachedModuleRelease[] {
@@ -666,7 +710,7 @@ function chunkArray<T> (items: T[], size: number): T[][] {
 }
 
 async function parseRepository (repo: RepoNode, fingerprint: string): Promise<ModuleRecord> {
-  const releases = normalizeReleases(repo)
+  const releases = await normalizeReleases(repo)
   const record: ModuleRecord = {
     name: repo.name,
     description: repo.description,
@@ -725,12 +769,25 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
   return record
 }
 
-function normalizeReleases (repo: RepoNode): ModuleRelease[] {
+async function normalizeReleases (repo: RepoNode): Promise<ModuleRelease[]> {
+  if (shouldFetchRestReleases(repo)) {
+    try {
+      console.log(`[repo] ${repo.name} has more releases/assets than GraphQL detail window; fetching releases with REST`)
+      return await fetchRestReleases(repo.name)
+    } catch (error) {
+      console.warn(`[repo] REST releases failed for ${repo.name}; using GraphQL detail window: ${(error as Error).message}`)
+    }
+  }
+
   const rawReleases = [
     ...(repo.latestRelease ? [repo.latestRelease] : []),
     ...(repo.releases?.nodes || [])
   ]
 
+  return normalizeReleaseNodes(rawReleases)
+}
+
+function normalizeReleaseNodes (rawReleases: ReleaseNode[]): ModuleRelease[] {
   return rawReleases
     .filter(release => {
       const assets = release.releaseAssets?.nodes || []
@@ -754,12 +811,83 @@ function normalizeReleases (repo: RepoNode): ModuleRelease[] {
     }))
 }
 
+function shouldFetchRestReleases (repo: RepoNode): boolean {
+  if (repo.releases?.pageInfo?.hasNextPage) return true
+  if ((repo.releases?.totalCount || 0) > (repo.releases?.nodes?.length || 0)) return true
+
+  const releases = [
+    repo.latestRelease,
+    ...(repo.releases?.nodes || [])
+  ].filter(Boolean) as ReleaseNode[]
+
+  return releases.some(release =>
+    release.releaseAssets?.pageInfo?.hasNextPage ||
+    (release.releaseAssets?.totalCount || 0) > (release.releaseAssets?.nodes?.length || 0)
+  )
+}
+
+async function fetchRestReleases (repoName: string): Promise<ModuleRelease[]> {
+  const releases: RestReleaseNode[] = []
+  let page = 1
+  let hasNextPage = true
+  const pageSize = Math.max(1, Math.min(100, Number.parseInt(process.env.GITHUB_REST_RELEASE_PAGE_SIZE || '100', 10)))
+  const maxPages = Math.max(1, Math.min(10, Number.parseInt(process.env.GITHUB_REST_RELEASE_MAX_PAGES || '5', 10)))
+
+  while (hasNextPage && page <= maxPages) {
+    const url = `https://api.github.com/repos/${encodeURIComponent(OWNER)}/${encodeURIComponent(repoName)}/releases?per_page=${pageSize}&page=${page}`
+    const { data, link } = await githubRestJson<RestReleaseNode[]>(url, {
+      headers: {
+        accept: 'application/vnd.github.html+json'
+      }
+    })
+
+    releases.push(...data)
+    hasNextPage = Boolean(link?.includes('rel="next"')) && data.length > 0
+    page++
+  }
+
+  if (hasNextPage) {
+    console.warn(`[repo] ${repoName} has more than ${pageSize * maxPages} REST releases; using the newest ${releases.length}`)
+  }
+
+  return releases
+    .filter(release => {
+      const assets = release.assets || []
+      return !release.draft &&
+        /^\d+-.+$/.test(release.tag_name) &&
+        assets.some(asset => asset.content_type === 'application/vnd.android.package-archive')
+    })
+    .map(release => ({
+      id: release.node_id || String(release.id),
+      name: release.name,
+      url: release.html_url,
+      isDraft: release.draft,
+      descriptionHTML: canonicalizeAssetHtml(replacePrivateImages(release.body, release.body_html)),
+      createdAt: release.created_at,
+      publishedAt: release.published_at,
+      updatedAt: release.updated_at,
+      tagName: release.tag_name,
+      isPrerelease: release.prerelease,
+      releaseAssets: (release.assets || []).map(toRestReleaseAsset)
+    }))
+}
+
 function toReleaseAsset (asset: AssetNode): ReleaseAsset {
   return {
     name: asset.name,
     contentType: asset.contentType,
     downloadUrl: asset.downloadUrl,
     downloadCount: asset.downloadCount,
+    size: asset.size
+  }
+}
+
+function toRestReleaseAsset (asset: RestReleaseAsset): ReleaseAsset {
+  return {
+    name: asset.name,
+    contentType: asset.content_type,
+    downloadUrl: asset.browser_download_url,
+    downloadCount: asset.download_count,
     size: asset.size
   }
 }
