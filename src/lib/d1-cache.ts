@@ -64,7 +64,7 @@ export interface D1CacheEntryMetadata {
   fingerprint?: string
 }
 
-type CacheNamespace = 'module-record' | 'readme-html' | 'release-html'
+type CacheNamespace = 'module-record' | 'release-list' | 'readme-html' | 'release-html'
 
 function config (): D1Config | null {
   if (disabledForBuild || process.env.D1_CACHE_ENABLED === 'false') return null
@@ -102,6 +102,10 @@ export function moduleRecordCachePrefix (owner: string, repoName: string): strin
 
 export function moduleLatestRecordCacheKey (owner: string, repoName: string): string {
   return moduleRecordCacheKey(owner, repoName)
+}
+
+export function releaseListCacheKey (owner: string, repoName: string, version: number): string {
+  return scopedKey('release-list', `v${version}`, safeName(owner), safeName(repoName), 'releases.json')
 }
 
 export function readmeHtmlCacheKey (owner: string, repoName: string, version: number): string {
@@ -188,24 +192,26 @@ export async function writeD1Text (
   const owner = metadata.owner || parts.owner || ''
   const repoName = metadata.repoName || parts.repoName || ''
 
-  if (cacheNamespace === 'module-record') {
+  if (cacheNamespace === 'module-record' || cacheNamespace === 'release-list') {
     const storedSize = Buffer.byteLength(value, 'utf8')
     if (storedSize > cfg.maxEntryBytes) {
       console.warn(`[d1-cache] Skipping ${key}; entry is ${storedSize} bytes, limit is ${cfg.maxEntryBytes}`)
       return
     }
 
+    const table = tableName(cacheNamespace)
+    const valueColumn = cacheNamespace === 'module-record' ? 'record_json' : 'releases_json'
     await query(
       cacheNamespace,
-      `INSERT INTO module_records
-        (cache_key, repo_owner, repo_name, fingerprint, record_json, raw_size, stored_size, created_at, updated_at, accessed_at, expires_at)
+      `INSERT INTO ${table}
+        (cache_key, repo_owner, repo_name, fingerprint, ${valueColumn}, raw_size, stored_size, created_at, updated_at, accessed_at, expires_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(repo_owner, repo_name) DO UPDATE SET
         cache_key = excluded.cache_key,
         repo_owner = excluded.repo_owner,
         repo_name = excluded.repo_name,
         fingerprint = excluded.fingerprint,
-        record_json = excluded.record_json,
+        ${valueColumn} = excluded.${valueColumn},
         raw_size = excluded.raw_size,
         stored_size = excluded.stored_size,
         updated_at = excluded.updated_at,
@@ -331,7 +337,7 @@ export async function cleanupD1Cache (): Promise<void> {
   const cfg = config()
   if (!cfg) return
 
-  for (const cacheNamespace of ['module-record', 'readme-html', 'release-html'] as CacheNamespace[]) {
+  for (const cacheNamespace of ['module-record', 'release-list', 'readme-html', 'release-html'] as CacheNamespace[]) {
     if (cleanupDone.has(cacheNamespace)) continue
     cleanupDone.add(cacheNamespace)
     await ensureD1Cache(cacheNamespace)
@@ -417,6 +423,26 @@ async function createSchema (cacheNamespace: CacheNamespace): Promise<void> {
     await query(cacheNamespace, 'CREATE UNIQUE INDEX IF NOT EXISTS idx_module_records_repo ON module_records(repo_owner, repo_name)')
     await query(cacheNamespace, 'CREATE INDEX IF NOT EXISTS idx_module_records_expires ON module_records(expires_at)')
     await query(cacheNamespace, 'CREATE INDEX IF NOT EXISTS idx_module_records_accessed ON module_records(accessed_at)')
+    return
+  }
+
+  if (cacheNamespace === 'release-list') {
+    await query(cacheNamespace, `CREATE TABLE IF NOT EXISTS release_lists (
+      cache_key TEXT PRIMARY KEY,
+      repo_owner TEXT NOT NULL,
+      repo_name TEXT NOT NULL,
+      fingerprint TEXT NOT NULL,
+      releases_json TEXT NOT NULL,
+      raw_size INTEGER NOT NULL,
+      stored_size INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      accessed_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    )`)
+    await query(cacheNamespace, 'CREATE UNIQUE INDEX IF NOT EXISTS idx_release_lists_repo ON release_lists(repo_owner, repo_name)')
+    await query(cacheNamespace, 'CREATE INDEX IF NOT EXISTS idx_release_lists_expires ON release_lists(expires_at)')
+    await query(cacheNamespace, 'CREATE INDEX IF NOT EXISTS idx_release_lists_accessed ON release_lists(accessed_at)')
     return
   }
 
@@ -559,6 +585,12 @@ function currentReadSql (cacheNamespace: CacheNamespace, placeholders: string): 
       WHERE cache_key IN (${placeholders}) AND expires_at >= ?`
   }
 
+  if (cacheNamespace === 'release-list') {
+    return `SELECT cache_key, releases_json AS value_text, raw_size, stored_size
+      FROM release_lists
+      WHERE cache_key IN (${placeholders}) AND expires_at >= ?`
+  }
+
   if (cacheNamespace === 'readme-html') {
     return `SELECT cache_key, value_gzip_b64, raw_size, stored_size
       FROM readme_html
@@ -574,6 +606,8 @@ function tableName (cacheNamespace: CacheNamespace): string {
   switch (cacheNamespace) {
     case 'module-record':
       return 'module_records'
+    case 'release-list':
+      return 'release_lists'
     case 'readme-html':
       return 'readme_html'
     case 'release-html':
@@ -611,6 +645,7 @@ function scopedPrefix (...parts: string[]): string {
 }
 
 function namespaceForKey (key: string, explicitNamespace?: string): CacheNamespace {
+  if (explicitNamespace === 'release-list' || key.includes(':release-list:')) return 'release-list'
   if (explicitNamespace === 'readme-html' || key.includes(':readme-html:')) return 'readme-html'
   if (explicitNamespace === 'release-html' || key.includes(':release-html:')) return 'release-html'
   return 'module-record'
@@ -631,6 +666,14 @@ function cacheParts (key: string, fallbackNamespace?: CacheNamespace): CacheKeyP
   }
 
   if (namespace === 'readme-html') {
+    return {
+      namespace,
+      owner: parts[2],
+      repoName: parts[3]
+    }
+  }
+
+  if (namespace === 'release-list') {
     return {
       namespace,
       owner: parts[2],

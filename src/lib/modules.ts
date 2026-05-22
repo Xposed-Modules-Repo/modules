@@ -32,6 +32,7 @@ import {
   readD1JsonMap,
   readmeHtmlCacheKey,
   readmeHtmlCachePrefix,
+  releaseListCacheKey,
   releaseHtmlCacheKey,
   writeD1Text,
   writeD1Json
@@ -51,6 +52,7 @@ import type {
 export const PAGE_SIZE = 30
 export const OWNER = process.env.GITHUB_ORG || 'Xposed-Modules-Repo'
 const RELEASE_HTML_ASSET_VERSION = 1
+const RELEASE_LIST_CACHE_VERSION = 1
 const GITHUB_ASSET_TEXT_URL_PATTERN = /https?:\/\/(?:raw\.githubusercontent\.com|user-images\.githubusercontent\.com|avatars\.githubusercontent\.com|camo\.githubusercontent\.com|github\.com\/(?:user-attachments|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/assets\/))[^\s<>'"`()[\]|]+/g
 const FORMAT_CONTROL_PATTERN = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g
 
@@ -179,6 +181,11 @@ type LegacyModuleRelease = ModuleRelease & {
 
 type D1CachedModuleRelease = ModuleRelease & {
   descriptionHTMLCacheKey?: string | null
+}
+
+interface ReleaseListCacheEntry {
+  fingerprint: string
+  releases: ModuleRelease[]
 }
 
 export async function getSiteData (): Promise<SiteData> {
@@ -771,9 +778,26 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
 
 async function normalizeReleases (repo: RepoNode): Promise<ModuleRelease[]> {
   if (shouldFetchRestReleases(repo)) {
+    const releaseListFingerprint = fingerprintReleaseList(repo)
+    const releaseListKey = releaseListCacheKey(OWNER, repo.name, RELEASE_LIST_CACHE_VERSION)
+    const cached = await readD1Json<ReleaseListCacheEntry>(releaseListKey)
+    if (cached?.fingerprint === releaseListFingerprint && Array.isArray(cached.releases)) {
+      console.log(`[d1-cache] Restored ${OWNER}/${repo.name} release list from D1`)
+      return cached.releases
+    }
+
     try {
       console.log(`[repo] ${repo.name} has more releases/assets than GraphQL detail window; fetching releases with REST`)
-      return await fetchRestReleases(repo.name)
+      const releases = await fetchRestReleases(repo.name)
+      await writeD1Json(releaseListKey, 'release-list', {
+        fingerprint: releaseListFingerprint,
+        releases
+      } satisfies ReleaseListCacheEntry, {
+        owner: OWNER,
+        repoName: repo.name,
+        fingerprint: releaseListFingerprint
+      })
+      return releases
     } catch (error) {
       console.warn(`[repo] REST releases failed for ${repo.name}; using GraphQL detail window: ${(error as Error).message}`)
     }
@@ -824,6 +848,17 @@ function shouldFetchRestReleases (repo: RepoNode): boolean {
     release.releaseAssets?.pageInfo?.hasNextPage ||
     (release.releaseAssets?.totalCount || 0) > (release.releaseAssets?.nodes?.length || 0)
   )
+}
+
+function fingerprintReleaseList (repo: RepoNode): string {
+  return sha256(stableJson({
+    latestRelease: compactRelease(repo.latestRelease),
+    releases: {
+      totalCount: repo.releases?.totalCount,
+      hasNextPage: repo.releases?.pageInfo?.hasNextPage,
+      nodes: (repo.releases?.nodes || []).map(compactRelease)
+    }
+  }))
 }
 
 async function fetchRestReleases (repoName: string): Promise<ModuleRelease[]> {
@@ -1119,8 +1154,11 @@ function compactRelease (release?: ReleaseNode | null): unknown {
       name: asset.name,
       contentType: asset.contentType,
       downloadUrl: asset.downloadUrl,
+      downloadCount: asset.downloadCount,
       size: asset.size
-    }))
+    })),
+    assetTotalCount: release.releaseAssets?.totalCount,
+    assetHasNextPage: release.releaseAssets?.pageInfo?.hasNextPage
   }
 }
 
