@@ -21,7 +21,6 @@ import {
   replacePrivateImages
 } from './markdown'
 import {
-  cleanupD1Cache,
   deleteD1KeysByPrefix,
   deleteD1ReleaseHtmlExcept,
   moduleLatestRecordCacheKey,
@@ -52,7 +51,7 @@ import type {
 export const PAGE_SIZE = 30
 export const OWNER = process.env.GITHUB_ORG || 'Xposed-Modules-Repo'
 const RELEASE_HTML_ASSET_VERSION = 1
-const RELEASE_LIST_CACHE_VERSION = 1
+const RELEASE_LIST_CACHE_VERSION = 2
 const GITHUB_ASSET_TEXT_URL_PATTERN = /https?:\/\/(?:raw\.githubusercontent\.com|user-images\.githubusercontent\.com|avatars\.githubusercontent\.com|camo\.githubusercontent\.com|github\.com\/(?:user-attachments|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/assets\/))[^\s<>'"`()[\]|]+/g
 const FORMAT_CONTROL_PATTERN = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g
 
@@ -77,6 +76,7 @@ interface AssetNode {
 
 interface ReleaseNode {
   id?: string | null
+  databaseId?: number | null
   name?: string | null
   url: string
   isDraft: boolean
@@ -185,7 +185,7 @@ type D1CachedModuleRelease = ModuleRelease & {
 
 interface ReleaseListCacheEntry {
   fingerprint: string
-  releases: ModuleRelease[]
+  releases: D1CachedModuleRelease[]
 }
 
 export async function getSiteData (): Promise<SiteData> {
@@ -445,7 +445,6 @@ async function restoreD1CachedRepositories (
 ): Promise<void> {
   if (!tasks.length) return
 
-  await cleanupD1Cache()
   const keysByRepo = new Map(tasks.map(task => [
     task.repo.name,
     moduleRecordCacheKey(OWNER, task.repo.name, task.fingerprint)
@@ -543,9 +542,13 @@ function d1CacheableModuleRecord (record: ModuleRecord): ModuleRecord {
 }
 
 async function writeD1CachedReleaseHtml (repoName: string, record: ModuleRecord): Promise<string[]> {
+  return writeD1CachedReleaseHtmlForReleases(repoName, record.releases)
+}
+
+async function writeD1CachedReleaseHtmlForReleases (repoName: string, releases: ModuleRelease[]): Promise<string[]> {
   const releaseIds = new Set<string>()
 
-  for (const release of record.releases) {
+  for (const release of releases) {
     const releaseId = d1ReleaseId(release)
     const key = d1ReleaseHtmlKey(repoName, release)
     if (!releaseId || !key || !release.descriptionHTML) continue
@@ -562,11 +565,19 @@ async function writeD1CachedReleaseHtml (repoName: string, record: ModuleRecord)
 }
 
 async function restoreD1CachedReleaseHtml (record: ModuleRecord): Promise<void> {
-  const releases = uniqueRecordReleases(record)
+  await restoreD1CachedReleaseHtmlForReleases(record.name, uniqueRecordReleases(record))
+}
+
+async function restoreD1CachedReleaseHtmlForReleases (
+  repoName: string,
+  releases: D1CachedModuleRelease[],
+  options: { restFallback?: boolean } = {}
+): Promise<void> {
   const keyedReleases = releases
+    .filter(release => !release.descriptionHTML)
     .map(release => ({
       release,
-      key: release.descriptionHTMLCacheKey || d1ReleaseHtmlKey(record.name, release)
+      key: release.descriptionHTMLCacheKey || d1ReleaseHtmlKey(repoName, release)
     }))
     .filter((entry): entry is { release: D1CachedModuleRelease, key: string } => Boolean(entry.key))
 
@@ -575,18 +586,39 @@ async function restoreD1CachedReleaseHtml (record: ModuleRecord): Promise<void> 
   const htmlByKey = await readD1TextMap([...new Set(keyedReleases.map(entry => entry.key))])
   for (const { release, key } of keyedReleases) {
     const html = htmlByKey.get(key)
-    if (html) release.descriptionHTML = html
+    if (html) {
+      release.descriptionHTML = html
+    } else if (options.restFallback) {
+      release.descriptionHTML = await restoreReleaseHtmlFromRest(repoName, release, key)
+    }
     delete release.descriptionHTMLCacheKey
   }
 }
 
 function d1CacheableRelease (repoName: string, release: ModuleRelease): D1CachedModuleRelease {
   const key = d1ReleaseHtmlKey(repoName, release)
+  const { descriptionHTML: _descriptionHTML, ...cacheableRelease } = release
   return {
-    ...release,
-    descriptionHTML: null,
+    ...cacheableRelease,
     descriptionHTMLCacheKey: key
   }
+}
+
+async function writeD1CachedReleaseList (
+  repoName: string,
+  key: string,
+  fingerprint: string,
+  releases: ModuleRelease[]
+): Promise<void> {
+  await writeD1CachedReleaseHtmlForReleases(repoName, releases)
+  await writeD1Json(key, 'release-list', {
+    fingerprint,
+    releases: releases.map(release => d1CacheableRelease(repoName, release))
+  } satisfies ReleaseListCacheEntry, {
+    owner: OWNER,
+    repoName,
+    fingerprint
+  })
 }
 
 function d1ReleaseHtmlKey (repoName: string, release: ModuleRelease): string | null {
@@ -783,20 +815,18 @@ async function normalizeReleases (repo: RepoNode): Promise<ModuleRelease[]> {
     const cached = await readD1Json<ReleaseListCacheEntry>(releaseListKey)
     if (cached?.fingerprint === releaseListFingerprint && Array.isArray(cached.releases)) {
       console.log(`[d1-cache] Restored ${OWNER}/${repo.name} release list from D1`)
-      return cached.releases
+      const releases = cached.releases.map(release => ({
+        ...release,
+        releaseAssets: [...(release.releaseAssets || [])]
+      }))
+      await restoreD1CachedReleaseHtmlForReleases(repo.name, releases, { restFallback: true })
+      return releases
     }
 
     try {
       console.log(`[repo] ${repo.name} has more releases/assets than GraphQL detail window; fetching releases with REST`)
       const releases = await fetchRestReleases(repo.name)
-      await writeD1Json(releaseListKey, 'release-list', {
-        fingerprint: releaseListFingerprint,
-        releases
-      } satisfies ReleaseListCacheEntry, {
-        owner: OWNER,
-        repoName: repo.name,
-        fingerprint: releaseListFingerprint
-      })
+      await writeD1CachedReleaseList(repo.name, releaseListKey, releaseListFingerprint, releases)
       return releases
     } catch (error) {
       console.warn(`[repo] REST releases failed for ${repo.name}; using GraphQL detail window: ${(error as Error).message}`)
@@ -822,6 +852,7 @@ function normalizeReleaseNodes (rawReleases: ReleaseNode[]): ModuleRelease[] {
     })
     .map(release => ({
       id: release.id,
+      databaseId: release.databaseId,
       name: release.name,
       url: release.url,
       isDraft: release.isDraft,
@@ -894,6 +925,7 @@ async function fetchRestReleases (repoName: string): Promise<ModuleRelease[]> {
     })
     .map(release => ({
       id: release.node_id || String(release.id),
+      databaseId: release.id,
       name: release.name,
       url: release.html_url,
       isDraft: release.draft,
@@ -905,6 +937,43 @@ async function fetchRestReleases (repoName: string): Promise<ModuleRelease[]> {
       isPrerelease: release.prerelease,
       releaseAssets: (release.assets || []).map(toRestReleaseAsset)
     }))
+}
+
+async function restoreReleaseHtmlFromRest (
+  repoName: string,
+  release: D1CachedModuleRelease,
+  cacheKey: string
+): Promise<string | null> {
+  const cacheReleaseId = d1ReleaseId(release)
+  const numericId = Number.isInteger(release.databaseId) ? release.databaseId : null
+  const url = numericId
+    ? `https://api.github.com/repos/${encodeURIComponent(OWNER)}/${encodeURIComponent(repoName)}/releases/${numericId}`
+    : `https://api.github.com/repos/${encodeURIComponent(OWNER)}/${encodeURIComponent(repoName)}/releases/tags/${encodeURIComponent(release.tagName)}`
+
+  try {
+    console.warn(`[d1-cache] Release HTML miss for ${OWNER}/${repoName}@${release.tagName}; fetching REST fallback`)
+    const { data } = await githubRestJson<RestReleaseNode>(url, {
+      headers: {
+        accept: 'application/vnd.github.html+json'
+      }
+    })
+    const descriptionHTML = canonicalizeAssetHtml(replacePrivateImages(data.body, data.body_html)) || null
+    release.id ||= data.node_id || String(data.id)
+    release.databaseId ||= data.id
+
+    if (descriptionHTML) {
+      await writeD1Text(cacheKey, 'release-html', descriptionHTML, {
+        owner: OWNER,
+        repoName,
+        releaseId: cacheReleaseId || d1ReleaseId(release) || release.tagName
+      })
+    }
+
+    return descriptionHTML
+  } catch (error) {
+    console.warn(`[d1-cache] Release HTML REST fallback failed for ${OWNER}/${repoName}@${release.tagName}: ${(error as Error).message}`)
+    return null
+  }
 }
 
 function toReleaseAsset (asset: AssetNode): ReleaseAsset {

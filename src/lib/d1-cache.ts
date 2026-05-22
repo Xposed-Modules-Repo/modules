@@ -333,11 +333,12 @@ export async function deleteD1ReleaseHtmlExcept (
   )
 }
 
-export async function cleanupD1Cache (): Promise<void> {
+async function cleanupD1Cache (namespaces?: CacheNamespace[]): Promise<void> {
   const cfg = config()
   if (!cfg) return
 
-  for (const cacheNamespace of ['module-record', 'release-list', 'readme-html', 'release-html'] as CacheNamespace[]) {
+  const targetNamespaces = namespaces || (['module-record', 'release-list', 'readme-html', 'release-html'] as CacheNamespace[])
+  for (const cacheNamespace of targetNamespaces) {
     if (cleanupDone.has(cacheNamespace)) continue
     cleanupDone.add(cacheNamespace)
     await ensureD1Cache(cacheNamespace)
@@ -350,7 +351,6 @@ async function readD1Rows (keys: string[]): Promise<Map<string, CacheRow>> {
   const cfg = config()
   const values = new Map<string, CacheRow>()
   if (!cfg || process.env.D1_CACHE_READS === 'false' || keys.length === 0) return values
-  await cleanupD1Cache()
 
   const keysByNamespace = new Map<CacheNamespace, string[]>()
   for (const key of new Set(keys)) {
@@ -359,6 +359,7 @@ async function readD1Rows (keys: string[]): Promise<Map<string, CacheRow>> {
   }
 
   for (const [cacheNamespace, namespaceKeys] of keysByNamespace) {
+    await cleanupD1Cache([cacheNamespace])
     await ensureD1Cache(cacheNamespace)
     await readCurrentRows(cacheNamespace, namespaceKeys, values)
   }

@@ -165,6 +165,7 @@ fragment RepositoryDetail on Repository {
   }
   latestRelease {
     id
+    databaseId
     name
     url
     isDraft
@@ -195,6 +196,7 @@ fragment RepositoryDetail on Repository {
     }
     nodes {
       id
+      databaseId
       name
       url
       isDraft
