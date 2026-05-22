@@ -19,6 +19,7 @@ export interface ReleaseAsset {
 }
 
 export interface ModuleRelease {
+  id?: string | null
   name?: string | null
   url: string
   isDraft: boolean

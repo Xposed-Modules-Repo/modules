@@ -29,6 +29,13 @@ Useful environment variables:
 - `USE_GITHUB_README_HTML_API=false`: skip GitHub's rendered README HTML API and render README markdown locally or via the Markdown API fallback.
 - `USE_GITHUB_MARKDOWN_API=false`: skip GitHub Markdown API and use local fallback rendering.
 - `CMARK_GFM_BIN`: optional path to a local `cmark-gfm` binary.
+- `D1_CACHE_DATABASE_ID`, `D1_CACHE_ACCOUNT_ID`, `D1_CACHE_API_TOKEN`: optional persistent build cache backed by Cloudflare D1. It stores gzip-compressed module metadata, rendered README HTML, and release HTML separately. Module records are keyed by repository, README HTML is overwritten per repository, and release HTML is keyed by GitHub release id. After a successful detail fetch, stale README/release rows for that repository are deleted. If D1 is missing, over quota, or returns an error, builds fall back to local cache/GitHub and continue.
+- `D1_CACHE_PREFIX`: optional D1 key prefix, defaults to `modules-cache:v1`.
+- `D1_CACHE_TTL_SECONDS`: cache TTL, defaults to 30 days.
+- `D1_CACHE_CLEANUP_INTERVAL_SECONDS`: minimum time between cleanup passes, defaults to 24 hours.
+- `D1_CACHE_MAX_ENTRY_BYTES`: max gzip/base64 entry size written to D1, defaults to `1500000` to stay below D1's 2 MB row limit.
+- `D1_CACHE_MAX_TOTAL_BYTES`: soft cache budget, defaults to `367001600` bytes (350 MiB). Cleanup removes expired entries first, then oldest entries.
+- `D1_CACHE_READS=false` or `D1_CACHE_WRITES=false`: disable one side of the D1 cache without changing other configuration.
 - `DIRTY_REPOS_ENDPOINT`: optional Worker endpoint that returns queued dirty repositories.
 - `DIRTY_REPOS_TOKEN`: bearer token for `DIRTY_REPOS_ENDPOINT`.
 - `PUBLIC_GOOGLE_ADS_CLIENT` or `PUBLIC_ADSENSE_CLIENT`: Google AdSense client id.

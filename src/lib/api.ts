@@ -8,6 +8,7 @@ type ApiReleaseAsset = ReleaseAsset & {
 
 type CachedModuleRelease = ModuleRelease & {
   description?: string | null
+  descriptionHTMLCacheKey?: string | null
 }
 
 type CachedModuleRecord = ModuleRecord & {
@@ -34,7 +35,7 @@ function apiReleaseAsset (asset: ReleaseAsset): ApiReleaseAsset {
 }
 
 function apiRelease (release: CachedModuleRelease): ApiModuleRelease {
-  const { description, ...publicRelease } = release
+  const { description, descriptionHTMLCacheKey, ...publicRelease } = release
 
   return {
     ...publicRelease,

@@ -10,6 +10,7 @@ import {
 } from './cache'
 import { fetchGithubReadmeHtml, renderGithubMarkdown } from './github'
 import { canonicalizeAssetHtml } from './asset-proxy'
+import { readD1Json, readmeHtmlCacheKey, writeD1Json } from './d1-cache'
 
 export const README_ASSET_VERSION = 4
 
@@ -17,6 +18,12 @@ interface ReadmeAssetContext {
   owner: string
   repoName: string
   commitOid: string
+}
+
+interface ReadmeHtmlCacheEntry {
+  oid: string
+  assetVersion: number
+  html: string
 }
 
 const PUBLIC_IMAGE_PATTERNS = [
@@ -77,11 +84,25 @@ export async function renderReadmeHtml (
     return refreshedHtml
   }
 
+  const remoteCacheKey = readmeHtmlCacheKey(owner, repoName, README_ASSET_VERSION)
+  const remoteEntry = await readD1Json<ReadmeHtmlCacheEntry>(remoteCacheKey)
+  if (remoteEntry?.oid === readmeOid && remoteEntry.assetVersion === README_ASSET_VERSION) {
+    const refreshedHtml = normalizeReadmeAssetHtml(markdown, remoteEntry.html, context) || remoteEntry.html
+    await ensureDir(path.dirname(htmlPath))
+    await fs.writeFile(htmlPath, refreshedHtml, 'utf8')
+    return refreshedHtml
+  }
+
   let html = await renderReadme(owner, repoName, markdown)
   html = normalizeReadmeAssetHtml(markdown, html, context) || html
 
   await ensureDir(path.dirname(htmlPath))
   await fs.writeFile(htmlPath, html, 'utf8')
+  await writeD1Json(remoteCacheKey, 'readme-html', {
+    oid: readmeOid,
+    assetVersion: README_ASSET_VERSION,
+    html
+  } satisfies ReadmeHtmlCacheEntry)
   return html
 }
 

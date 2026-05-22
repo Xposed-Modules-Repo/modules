@@ -10,6 +10,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "typecheck": "tsc --noEmit",
+    "d1:schema": "wrangler d1 execute modules-build-cache --remote --file d1/schema.sql",
     "worker:dev": "wrangler dev -c worker/wrangler.toml",
     "worker:deploy": "wrangler deploy -c worker/wrangler.toml"
   },

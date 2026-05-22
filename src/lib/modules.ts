@@ -20,6 +20,22 @@ import {
   renderReadmeHtml,
   replacePrivateImages
 } from './markdown'
+import {
+  cleanupD1Cache,
+  deleteD1KeysByPrefix,
+  moduleLatestRecordCacheKey,
+  moduleRecordCacheKey,
+  moduleRecordCachePrefix,
+  readD1TextMap,
+  readD1Json,
+  readD1JsonMap,
+  readmeHtmlCacheKey,
+  readmeHtmlCachePrefix,
+  releaseHtmlCacheKey,
+  releaseHtmlCachePrefix,
+  writeD1Text,
+  writeD1Json
+} from './d1-cache'
 import { REPOSITORY_DETAIL_QUERY, repositoryDetailBatchQuery } from './queries'
 import type {
   Author,
@@ -34,6 +50,7 @@ import type {
 
 export const PAGE_SIZE = 30
 export const OWNER = process.env.GITHUB_ORG || 'Xposed-Modules-Repo'
+const RELEASE_HTML_ASSET_VERSION = 1
 const GITHUB_ASSET_TEXT_URL_PATTERN = /https?:\/\/(?:raw\.githubusercontent\.com|user-images\.githubusercontent\.com|avatars\.githubusercontent\.com|camo\.githubusercontent\.com|github\.com\/(?:user-attachments|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/assets\/))[^\s<>'"`()[\]|]+/g
 const FORMAT_CONTROL_PATTERN = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g
 
@@ -57,6 +74,7 @@ interface AssetNode {
 }
 
 interface ReleaseNode {
+  id?: string | null
   name?: string | null
   url: string
   isDraft: boolean
@@ -124,6 +142,11 @@ type LegacyModuleRecord = ModuleRecord & {
 
 type LegacyModuleRelease = ModuleRelease & {
   description?: string | null
+  descriptionHTMLCacheKey?: string | null
+}
+
+type D1CachedModuleRelease = ModuleRelease & {
+  descriptionHTMLCacheKey?: string | null
 }
 
 export async function getSiteData (): Promise<SiteData> {
@@ -160,6 +183,7 @@ async function buildSiteData (): Promise<SiteData> {
   const recordsByName = new Map<string, ModuleRecord>()
   const repoStates: HydrationTask[] = []
   const hydrationTasks: HydrationTask[] = []
+  const remoteCacheTasks: HydrationTask[] = []
 
   for (const repo of inventory) {
     const fingerprint = fingerprintRepository(repo)
@@ -186,7 +210,8 @@ async function buildSiteData (): Promise<SiteData> {
 
     if (!record) {
       if (isPotentialModuleRepository(repo)) {
-        hydrationTasks.push(state)
+        if (forceHydrate) hydrationTasks.push(state)
+        else remoteCacheTasks.push(state)
         continue
       }
       record = minimalRepositoryRecord(repo, fingerprint)
@@ -196,13 +221,14 @@ async function buildSiteData (): Promise<SiteData> {
     recordsByName.set(repo.name, record)
   }
 
+  await restoreD1CachedRepositories(remoteCacheTasks, recordsByName, hydrationTasks)
   await hydrateRepositories(hydrationTasks, recordsByName)
 
   const allModuleRecords: ModuleRecord[] = []
   for (const { repo, fingerprint, dataPath } of repoStates) {
     const record = recordsByName.get(repo.name) || minimalRepositoryRecord(repo, fingerprint)
     manifest.repos[repo.name] = {
-      fingerprint,
+      fingerprint: record.fingerprint || fingerprint,
       dataPath,
       readmeOid: record.readmeOid
     }
@@ -373,6 +399,172 @@ async function fetchRepositoryInventory (name: string): Promise<RepoNode | null>
   }
 }
 
+async function restoreD1CachedRepositories (
+  tasks: HydrationTask[],
+  recordsByName: Map<string, ModuleRecord>,
+  hydrationTasks: HydrationTask[]
+): Promise<void> {
+  if (!tasks.length) return
+
+  await cleanupD1Cache()
+  const keysByRepo = new Map(tasks.map(task => [
+    task.repo.name,
+    moduleRecordCacheKey(OWNER, task.repo.name, task.fingerprint)
+  ]))
+  const records = await readD1JsonMap<ModuleRecord>([...keysByRepo.values()])
+
+  for (const task of tasks) {
+    const key = keysByRepo.get(task.repo.name)
+    const record = key ? records.get(key) : null
+    if (record?.fingerprint === task.fingerprint) {
+      console.log(`[d1-cache] Restored ${OWNER}/${task.repo.name} from D1`)
+      await restoreD1CachedReadme(record)
+      await restoreD1CachedReleaseHtml(record)
+      await writeJson(task.dataPath, record)
+      await refreshCachedModuleRecord(record, task.dataPath)
+      recordsByName.set(task.repo.name, record)
+      continue
+    }
+
+    hydrationTasks.push(task)
+  }
+}
+
+async function readStaleCachedModuleRecord (repoName: string, dataPath: string): Promise<ModuleRecord | null> {
+  const localRecord = await readJson<ModuleRecord>(dataPath)
+  if (localRecord) {
+    await refreshCachedModuleRecord(localRecord, dataPath)
+    return localRecord
+  }
+
+  const remoteRecord = await readD1Json<ModuleRecord>(moduleLatestRecordCacheKey(OWNER, repoName))
+  if (!remoteRecord) return null
+
+  console.warn(`[d1-cache] Restored stale ${OWNER}/${repoName} from D1 latest cache`)
+  await restoreD1CachedReadme(remoteRecord)
+  await restoreD1CachedReleaseHtml(remoteRecord)
+  await writeJson(dataPath, remoteRecord)
+  await refreshCachedModuleRecord(remoteRecord, dataPath)
+  return remoteRecord
+}
+
+async function writeD1CachedModuleRecord (repoName: string, record: ModuleRecord): Promise<void> {
+  if (!record.isModule) return
+
+  const releaseHtmlKeys = await writeD1CachedReleaseHtml(repoName, record)
+  await deleteD1KeysByPrefix(
+    'release-html',
+    releaseHtmlCachePrefix(OWNER, repoName, RELEASE_HTML_ASSET_VERSION),
+    releaseHtmlKeys
+  )
+  await deleteD1KeysByPrefix(
+    'readme-html',
+    readmeHtmlCachePrefix(OWNER, repoName, README_ASSET_VERSION),
+    record.readmeOid ? [readmeHtmlCacheKey(OWNER, repoName, README_ASSET_VERSION)] : []
+  )
+
+  const cacheRecord = d1CacheableModuleRecord(record)
+  const recordKey = moduleRecordCacheKey(OWNER, repoName, record.fingerprint)
+  await writeD1Json(recordKey, 'module-record', cacheRecord)
+  await deleteD1KeysByPrefix('module-record', moduleRecordCachePrefix(OWNER, repoName), [recordKey])
+  await deleteD1KeysByPrefix('module-record-latest', moduleRecordCachePrefix(OWNER, repoName), [])
+}
+
+async function restoreD1CachedReadme (record: ModuleRecord): Promise<void> {
+  if (record.readmeHTML || !record.readmeOid) return
+
+  try {
+    record.readmeHTML = await renderReadmeHtml(
+      OWNER,
+      record.name,
+      null,
+      record.readmeOid,
+      record.defaultBranchOid || 'HEAD'
+    )
+    record.readmeAssetVersion = README_ASSET_VERSION
+  } catch (error) {
+    console.warn(`[d1-cache] README restore failed for ${OWNER}/${record.name}: ${(error as Error).message}`)
+  }
+}
+
+function d1CacheableModuleRecord (record: ModuleRecord): ModuleRecord {
+  const releases = record.releases.map(release => d1CacheableRelease(record.name, release))
+
+  return {
+    ...record,
+    readmeHTML: null,
+    releases,
+    latestRelease: record.latestRelease ? d1CacheableRelease(record.name, record.latestRelease) : undefined,
+    latestBetaRelease: record.latestBetaRelease ? d1CacheableRelease(record.name, record.latestBetaRelease) : undefined,
+    latestSnapshotRelease: record.latestSnapshotRelease ? d1CacheableRelease(record.name, record.latestSnapshotRelease) : undefined
+  }
+}
+
+async function writeD1CachedReleaseHtml (repoName: string, record: ModuleRecord): Promise<string[]> {
+  const keys = new Set<string>()
+
+  for (const release of record.releases) {
+    const key = d1ReleaseHtmlKey(repoName, release)
+    if (!key || !release.descriptionHTML) continue
+
+    keys.add(key)
+    await writeD1Text(key, 'release-html', release.descriptionHTML)
+  }
+
+  return [...keys]
+}
+
+async function restoreD1CachedReleaseHtml (record: ModuleRecord): Promise<void> {
+  const releases = uniqueRecordReleases(record)
+  const keyedReleases = releases
+    .map(release => ({
+      release,
+      key: release.descriptionHTMLCacheKey || d1ReleaseHtmlKey(record.name, release)
+    }))
+    .filter((entry): entry is { release: D1CachedModuleRelease, key: string } => Boolean(entry.key))
+
+  if (!keyedReleases.length) return
+
+  const htmlByKey = await readD1TextMap([...new Set(keyedReleases.map(entry => entry.key))])
+  for (const { release, key } of keyedReleases) {
+    const html = htmlByKey.get(key)
+    if (html) release.descriptionHTML = html
+    delete release.descriptionHTMLCacheKey
+  }
+}
+
+function d1CacheableRelease (repoName: string, release: ModuleRelease): D1CachedModuleRelease {
+  const key = d1ReleaseHtmlKey(repoName, release)
+  return {
+    ...release,
+    descriptionHTML: null,
+    descriptionHTMLCacheKey: key
+  }
+}
+
+function d1ReleaseHtmlKey (repoName: string, release: ModuleRelease): string | null {
+  const releaseId = release.id || release.tagName
+  if (!releaseId) return null
+  return releaseHtmlCacheKey(OWNER, repoName, releaseId, RELEASE_HTML_ASSET_VERSION)
+}
+
+function uniqueRecordReleases (record: ModuleRecord): D1CachedModuleRelease[] {
+  const releases = [
+    ...record.releases,
+    record.latestRelease,
+    record.latestBetaRelease,
+    record.latestSnapshotRelease
+  ].filter(Boolean) as D1CachedModuleRelease[]
+
+  const seen = new Set<string>()
+  return releases.filter(release => {
+    const key = release.descriptionHTMLCacheKey || d1ReleaseHtmlKey(record.name, release) || release.tagName || release.url
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 async function hydrateRepositories (
   tasks: HydrationTask[],
   recordsByName: Map<string, ModuleRecord>
@@ -396,12 +588,19 @@ async function hydrateRepositories (
         if (!detail) throw new Error(`Repository not found: ${OWNER}/${task.repo.name}`)
         record = await parseRepository(detail, task.fingerprint)
       } catch (error) {
-        console.warn(`[hydrate] Skipping ${OWNER}/${task.repo.name}: ${(error as Error).message}`)
-        record = minimalRepositoryRecord(task.repo, task.fingerprint)
+        const staleRecord = await readStaleCachedModuleRecord(task.repo.name, task.dataPath)
+        if (staleRecord) {
+          console.warn(`[hydrate] Using stale cached record for ${OWNER}/${task.repo.name}: ${(error as Error).message}`)
+          record = staleRecord
+        } else {
+          console.warn(`[hydrate] Skipping ${OWNER}/${task.repo.name}: ${(error as Error).message}`)
+          record = minimalRepositoryRecord(task.repo, task.fingerprint)
+        }
       }
 
       recordsByName.set(task.repo.name, record)
       await writeJson(task.dataPath, record)
+      if (record.fingerprint === task.fingerprint) await writeD1CachedModuleRecord(task.repo.name, record)
     }
   }
 }
@@ -541,6 +740,7 @@ function normalizeReleases (repo: RepoNode): ModuleRelease[] {
         assets.some(asset => asset.contentType === 'application/vnd.android.package-archive')
     })
     .map(release => ({
+      id: release.id,
       name: release.name,
       url: release.url,
       isDraft: release.isDraft,
@@ -622,6 +822,9 @@ function minimalRepositoryRecord (repo: RepoNode, fingerprint: string): ModuleRe
 }
 
 async function refreshCachedModuleRecord (record: ModuleRecord, dataPath: string): Promise<void> {
+  await restoreD1CachedReadme(record)
+  await restoreD1CachedReleaseHtml(record)
+
   const cachedReadme = (record as LegacyModuleRecord).readme
   let changed = refreshCachedCollaborators(record)
   if (refreshCachedHtmlAssets(record, cachedReadme)) changed = true
@@ -710,6 +913,11 @@ function refreshCachedReleaseAssets (release: ModuleRelease | undefined): boolea
     changed = true
   }
 
+  if ('descriptionHTMLCacheKey' in release) {
+    delete cachedRelease.descriptionHTMLCacheKey
+    changed = true
+  }
+
   if (!release.releaseAssets) return changed
 
   for (const asset of release.releaseAssets as Array<ReleaseAsset & { proxyDownloadUrl?: unknown }>) {
@@ -771,6 +979,7 @@ function fingerprintRepository (repo: RepoNode): string {
 function compactRelease (release?: ReleaseNode | null): unknown {
   if (!release) return null
   return {
+    id: release.id,
     name: release.name,
     tagName: release.tagName,
     isDraft: release.isDraft,

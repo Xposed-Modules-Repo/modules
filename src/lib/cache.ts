@@ -44,13 +44,25 @@ export async function readJson<T> (file: string): Promise<T | null> {
     return JSON.parse(await fs.readFile(file, 'utf8')) as T
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
-    throw error
+    console.warn(`[cache] Ignoring unreadable JSON cache ${file}: ${(error as Error).message}`)
+    return null
   }
 }
 
 export async function writeJson (file: string, value: unknown): Promise<void> {
   await ensureDir(path.dirname(file))
-  await fs.writeFile(file, `${JSON.stringify(value)}\n`, 'utf8')
+  const tempFile = `${file}.${process.pid}.${Date.now()}.tmp`
+  try {
+    await fs.writeFile(tempFile, `${JSON.stringify(value)}\n`, 'utf8')
+    await fs.rename(tempFile, file)
+  } catch (error) {
+    try {
+      await fs.unlink(tempFile)
+    } catch {
+      // Best-effort cleanup. The original cache file was not touched.
+    }
+    throw error
+  }
 }
 
 export async function readManifest (owner: string): Promise<BuildManifest> {

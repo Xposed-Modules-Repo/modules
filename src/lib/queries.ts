@@ -51,6 +51,7 @@ fragment RepositoryInventory on Repository {
     }
   }
   latestRelease {
+    id
     name
     url
     isDraft
@@ -154,6 +155,7 @@ fragment RepositoryDetail on Repository {
     }
   }
   latestRelease {
+    id
     name
     url
     isDraft
@@ -175,6 +177,7 @@ fragment RepositoryDetail on Repository {
   }
   releases(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
     nodes {
+      id
       name
       url
       isDraft
