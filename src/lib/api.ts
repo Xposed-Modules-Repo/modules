@@ -70,29 +70,27 @@ function escapeHtmlAttribute (value: string): string {
 function adsScriptHtml (client: string): string {
   const scriptUrl = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`
 
-  return `<script data-readme-ad="true" async src="${scriptUrl}" crossorigin="anonymous"></script>`
+  return `<script data-readme-ad="true" async src="${scriptUrl}"></script>`
 }
 
 function readmeAdHtml (): string | null {
   const client = publicEnv('PUBLIC_GOOGLE_ADS_CLIENT') || publicEnv('PUBLIC_ADSENSE_CLIENT')
-  if (!client) return null
-
   const slot = publicEnv('PUBLIC_AD_SLOT_README') || publicEnv('PUBLIC_AD_SLOT_TOP')
-  const scriptHtml = adsScriptHtml(client)
-  if (!slot) return scriptHtml
+  if (!client || !slot) return null
 
   const escapedClient = escapeHtmlAttribute(client)
   const escapedSlot = escapeHtmlAttribute(slot)
+  const scriptHtml = adsScriptHtml(client)
 
   return [
     '<aside class="ad-slot ad-slot-readme" aria-label="Advertisement">',
     scriptHtml,
     '<ins class="adsbygoogle"',
-    ' style="display:block"',
+    ' style="display:block; text-align:center;"',
+    ' data-ad-layout="in-article"',
+    ' data-ad-format="fluid"',
     ` data-ad-client="${escapedClient}"`,
-    ` data-ad-slot="${escapedSlot}"`,
-    ' data-ad-format="auto"',
-    ' data-full-width-responsive="true"></ins>',
+    ` data-ad-slot="${escapedSlot}"></ins>`,
     '<script>(window.adsbygoogle = window.adsbygoogle || []).push({});</script>',
     '</aside>'
   ].join('')
@@ -105,7 +103,7 @@ function readmeHtmlWithAds (html: string | null | undefined): string | null | un
   if (!adHtml) return html
 
   const $ = load(html, {}, false)
-  if ($('.ad-slot-readme, script[data-readme-ad="true"]').length) return html
+  if ($('.ad-slot-readme').length) return html
 
   const target = $('.markdown-heading, h1, h2, p, ul, ol, blockquote, pre, table').first()
   if (target.length) {
