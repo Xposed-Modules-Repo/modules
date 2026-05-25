@@ -175,14 +175,7 @@ export function moduleJson (module: ModuleRecord): Record<string, unknown> {
     releases: module.releases.map(apiRelease),
     collaborators: apiCollaborators(module),
     additionalAuthors: apiAdditionalAuthors(module),
-    ...latestReleaseTags(module),
-    childGitHubReadme: readmeHTML
-      ? {
-          childMarkdownRemark: {
-            html: readmeHTML
-          }
-        }
-      : null
+    ...latestReleaseTags(module)
   }
 }
 
