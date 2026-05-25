@@ -19,11 +19,18 @@ type ApiModuleRelease = Omit<CachedModuleRelease, 'description'> & {
   releaseAssets?: ApiReleaseAsset[]
 }
 
+interface ApiJsonOptions {
+  proxyAssets?: boolean
+  includeAds?: boolean
+}
+
 const PUBLIC_ENV = (import.meta as ImportMeta & {
   env?: Record<string, string | undefined>
 }).env
 
-function apiReleaseAsset (asset: ReleaseAsset): ApiReleaseAsset {
+function apiReleaseAsset (asset: ReleaseAsset, options: ApiJsonOptions): ApiReleaseAsset {
+  if (options.proxyAssets === false) return asset
+
   const proxiedDownloadUrl = proxyAssetUrl(asset.downloadUrl)
   if (!proxiedDownloadUrl) return asset
 
@@ -34,13 +41,16 @@ function apiReleaseAsset (asset: ReleaseAsset): ApiReleaseAsset {
   }
 }
 
-function apiRelease (release: CachedModuleRelease): ApiModuleRelease {
+function apiRelease (release: CachedModuleRelease, options: ApiJsonOptions = {}): ApiModuleRelease {
   const { description, descriptionHTMLCacheKey, ...publicRelease } = release
+  const descriptionHTML = options.proxyAssets === false
+    ? publicRelease.descriptionHTML
+    : rewriteAssetProxyHtml(publicRelease.descriptionHTML) || publicRelease.descriptionHTML
 
   return {
     ...publicRelease,
-    descriptionHTML: rewriteAssetProxyHtml(publicRelease.descriptionHTML) || publicRelease.descriptionHTML,
-    releaseAssets: release.releaseAssets?.map(apiReleaseAsset)
+    descriptionHTML,
+    releaseAssets: release.releaseAssets?.map(asset => apiReleaseAsset(asset, options))
   }
 }
 
@@ -166,20 +176,22 @@ function apiAdditionalAuthors (module: ModuleRecord): Array<Record<string, strin
     : null
 }
 
-export function moduleJson (module: ModuleRecord): Record<string, unknown> {
-  const readmeHTML = readmeHtmlWithAds(rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML)
+export function moduleJson (module: ModuleRecord, options: ApiJsonOptions = {}): Record<string, unknown> {
+  const readmeHTML = options.includeAds === false
+    ? (options.proxyAssets === false ? module.readmeHTML : rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML)
+    : readmeHtmlWithAds(options.proxyAssets === false ? module.readmeHTML : rewriteAssetProxyHtml(module.readmeHTML) || module.readmeHTML)
 
   return {
     ...publicModuleFields(module),
     readmeHTML,
-    releases: module.releases.map(apiRelease),
+    releases: module.releases.map(release => apiRelease(release, options)),
     collaborators: apiCollaborators(module),
     additionalAuthors: apiAdditionalAuthors(module),
     ...latestReleaseTags(module)
   }
 }
 
-export function modulesJson (modules: ModuleRecord[]): Array<Record<string, unknown>> {
+export function modulesJson (modules: ModuleRecord[], options: ApiJsonOptions = {}): Array<Record<string, unknown>> {
   return modules.map(module => {
     const latestRelease = module.latestRelease
     const latestBetaRelease = module.latestBetaRelease
@@ -190,15 +202,23 @@ export function modulesJson (modules: ModuleRecord[]): Array<Record<string, unkn
       collaborators: apiCollaborators(module),
       additionalAuthors: apiAdditionalAuthors(module),
       ...latestReleaseTags(module),
-      releases: latestRelease ? [apiRelease(latestRelease)] : [],
+      releases: latestRelease ? [apiRelease(latestRelease, options)] : [],
       betaReleases: latestBetaRelease && latestBetaRelease.tagName !== latestRelease?.tagName
-        ? [apiRelease(latestBetaRelease)]
+        ? [apiRelease(latestBetaRelease, options)]
         : undefined,
       snapshotReleases: latestSnapshotRelease &&
         latestSnapshotRelease.tagName !== latestRelease?.tagName &&
         latestSnapshotRelease.tagName !== latestBetaRelease?.tagName
-        ? [apiRelease(latestSnapshotRelease)]
+        ? [apiRelease(latestSnapshotRelease, options)]
         : undefined
     }
   })
+}
+
+export function moduleJsonNoProxy (module: ModuleRecord): Record<string, unknown> {
+  return moduleJson(module, { proxyAssets: false, includeAds: false })
+}
+
+export function modulesJsonNoProxy (modules: ModuleRecord[]): Array<Record<string, unknown>> {
+  return modulesJson(modules, { proxyAssets: false, includeAds: false })
 }
