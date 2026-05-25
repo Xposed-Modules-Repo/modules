@@ -32,7 +32,7 @@ async function main () {
   await writeFile(path.join(OUTPUT_DIR, '.nojekyll'), '')
   await writeFile(path.join(OUTPUT_DIR, 'CNAME'), `${CNAME}\n`)
 
-  const modulesText = await fetchText(new URL('/modules.json', source))
+  const modulesText = await fetchFirstText(source, ['/modules-no-proxy.json', '/modules.json'])
   const modules = JSON.parse(modulesText)
   if (!Array.isArray(modules)) throw new Error('/modules.json is not an array')
 
@@ -44,8 +44,12 @@ async function main () {
 
   console.log(`[mirror] Mirroring ${names.length} module JSON files`)
   await mapLimit(names, CONCURRENCY, async (name, index) => {
-    const moduleUrl = new URL(`/module/${encodeURIComponent(name)}.json`, source)
-    await writeFile(path.join(OUTPUT_DIR, 'module', `${name}.json`), await fetchText(moduleUrl))
+    const encodedName = encodeURIComponent(name)
+    const moduleText = await fetchFirstText(source, [
+      `/module-no-proxy/${encodedName}.json`,
+      `/module/${encodedName}.json`
+    ])
+    await writeFile(path.join(OUTPUT_DIR, 'module', `${name}.json`), moduleText)
 
     if ((index + 1) % 50 === 0 || index + 1 === names.length) {
       console.log(`[mirror] ${index + 1}/${names.length}`)
@@ -105,10 +109,20 @@ function isWantedDeployment (deployment) {
     deployment.deployment_trigger?.metadata?.branch === BRANCH
 }
 
-async function fetchText (url) {
-  const response = await fetchWithRetry(url, { headers: sourceHeaders() })
-  if (!response.ok) throw new Error(`Failed to fetch ${url.pathname}: ${response.status}`)
-  return response.text()
+async function fetchFirstText (source, paths) {
+  let firstError
+
+  for (const pathname of paths) {
+    const url = new URL(pathname, source)
+    const response = await fetchWithRetry(url, { headers: sourceHeaders() })
+    if (response.ok) return response.text()
+
+    const error = new Error(`Failed to fetch ${url.pathname}: ${response.status}`)
+    firstError ||= error
+    if (response.status !== 404) throw error
+  }
+
+  throw firstError || new Error('No source path provided')
 }
 
 async function fetchJson (url, headers) {
