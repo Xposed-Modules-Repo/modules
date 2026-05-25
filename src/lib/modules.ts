@@ -12,6 +12,7 @@ import {
   writeJson,
   writeManifest
 } from './cache'
+import type { BuildManifest } from './cache'
 import { githubGraphql, githubRestJson } from './github'
 import { canonicalizeAssetHtml, proxyAssetUrl } from './asset-proxy'
 import {
@@ -211,7 +212,12 @@ async function buildSiteData (): Promise<SiteData> {
   const manifest = await readManifest(OWNER)
   const dirtyRepos = await dirtyRepoNames()
   const dirtyRepoSet = new Set(dirtyRepos)
-  const inventory = await loadInventory(manifest.inventory as Record<string, RepoNode>, dirtyRepos)
+  const d1Prefetcher = new D1RepositoryPrefetcher(manifest, dirtyRepoSet)
+  const inventory = await loadInventory(
+    manifest.inventory as Record<string, RepoNode>,
+    dirtyRepos,
+    repos => d1Prefetcher.enqueue(repos)
+  )
   const inventoryByName = Object.fromEntries(inventory.map(repo => [repo.name, repo]))
 
   manifest.inventory = inventoryByName
@@ -260,7 +266,8 @@ async function buildSiteData (): Promise<SiteData> {
     recordsByName.set(repo.name, record)
   }
 
-  await restoreD1CachedRepositories(remoteCacheTasks, recordsByName, hydrationTasks)
+  await d1Prefetcher.finish()
+  await restoreD1CachedRepositories(remoteCacheTasks, recordsByName, hydrationTasks, d1Prefetcher.records)
   await hydrateRepositories(hydrationTasks, recordsByName)
 
   const allModuleRecords: ModuleRecord[] = []
@@ -348,10 +355,67 @@ function sampleSiteData (): SiteData {
   }
 }
 
-async function loadInventory (cachedInventory: Record<string, RepoNode>, dirtyRepos: string[]): Promise<RepoNode[]> {
+type InventoryPageHandler = (repos: RepoNode[]) => void
+
+class D1RepositoryPrefetcher {
+  readonly records = new Map<string, ModuleRecord | null>()
+  private readonly tasks: Array<Promise<void>> = []
+
+  constructor (
+    private readonly manifest: BuildManifest,
+    private readonly dirtyRepoSet: Set<string>
+  ) {}
+
+  enqueue (repos: RepoNode[]): void {
+    const promise = this.prefetch(repos).catch(error => {
+      console.warn(`[d1-cache] Prefetch failed: ${(error as Error).message}`)
+    })
+    this.tasks.push(promise)
+  }
+
+  async finish (): Promise<void> {
+    await Promise.all(this.tasks)
+  }
+
+  private async prefetch (repos: RepoNode[]): Promise<void> {
+    const candidates: Array<{ repoName: string, fingerprint: string, key: string }> = []
+
+    await Promise.all(repos.map(async repo => {
+      if (this.dirtyRepoSet.has(repo.name) || !isPotentialModuleRepository(repo)) return
+
+      const fingerprint = fingerprintRepository(repo)
+      const cached = this.manifest.repos[repo.name]
+      if (cached?.fingerprint === fingerprint && await pathExists(repoDataPath(repo.name))) return
+
+      candidates.push({
+        repoName: repo.name,
+        fingerprint,
+        key: moduleRecordCacheKey(OWNER, repo.name, fingerprint)
+      })
+    }))
+
+    if (!candidates.length) return
+
+    const rows = await readD1JsonMap<ModuleRecord>(candidates.map(candidate => candidate.key))
+    let restored = 0
+    for (const candidate of candidates) {
+      const record = rows.get(candidate.key) || null
+      const validRecord = record?.fingerprint === candidate.fingerprint ? record : null
+      this.records.set(candidate.repoName, validRecord)
+      if (validRecord) restored++
+    }
+    if (restored) console.log(`[d1-cache] Prefetched ${restored}/${candidates.length} module records from D1`)
+  }
+}
+
+async function loadInventory (
+  cachedInventory: Record<string, RepoNode>,
+  dirtyRepos: string[],
+  onPage?: InventoryPageHandler
+): Promise<RepoNode[]> {
   try {
     // Partial builds still need fresh REST inventory; otherwise one missed webhook can keep unrelated cached pages stale.
-    const repos = await fetchOrganizationInventory()
+    const repos = await fetchOrganizationInventory(onPage)
     if (!dirtyRepos.length) return repos
 
     const next = new Map(repos.map(repo => [repo.name, repo]))
@@ -360,7 +424,10 @@ async function loadInventory (cachedInventory: Record<string, RepoNode>, dirtyRe
 
       console.log(`[inventory] Dirty repo ${OWNER}/${name} was not in org inventory; refreshing directly`)
       const repo = await fetchRepositoryInventory(name)
-      if (repo) next.set(name, repo)
+      if (repo) {
+        onPage?.([repo])
+        next.set(name, repo)
+      }
     }
     return [...next.values()]
   } catch (error) {
@@ -371,7 +438,10 @@ async function loadInventory (cachedInventory: Record<string, RepoNode>, dirtyRe
     for (const name of dirtyRepos) {
       console.log(`[inventory] Refreshing dirty repo ${OWNER}/${name}`)
       const repo = await fetchRepositoryInventory(name)
-      if (repo) next.set(name, repo)
+      if (repo) {
+        onPage?.([repo])
+        next.set(name, repo)
+      }
       else next.delete(name)
     }
     return [...next.values()]
@@ -408,7 +478,7 @@ async function dirtyRepoNames (): Promise<string[]> {
   return [...new Set(values)]
 }
 
-async function fetchOrganizationInventory (): Promise<RepoNode[]> {
+async function fetchOrganizationInventory (onPage?: InventoryPageHandler): Promise<RepoNode[]> {
   const repos: RepoNode[] = []
   let hasNextPage = true
   let page = 1
@@ -419,7 +489,9 @@ async function fetchOrganizationInventory (): Promise<RepoNode[]> {
     const url = `https://api.github.com/orgs/${encodeURIComponent(OWNER)}/repos?type=public&sort=updated&direction=desc&per_page=${pageSize}&page=${page}`
     const { data, link } = await githubRestJson<RestRepoNode[]>(url)
 
-    repos.push(...data.map(restRepoToRepoNode))
+    const pageRepos = data.map(restRepoToRepoNode)
+    repos.push(...pageRepos)
+    onPage?.(pageRepos)
     hasNextPage = Boolean(link?.includes('rel="next"')) && data.length > 0
     page++
   }
@@ -441,19 +513,28 @@ async function fetchRepositoryInventory (name: string): Promise<RepoNode | null>
 async function restoreD1CachedRepositories (
   tasks: HydrationTask[],
   recordsByName: Map<string, ModuleRecord>,
-  hydrationTasks: HydrationTask[]
+  hydrationTasks: HydrationTask[],
+  prefetchedRecords: Map<string, ModuleRecord | null> = new Map()
 ): Promise<void> {
   if (!tasks.length) return
 
-  const keysByRepo = new Map(tasks.map(task => [
-    task.repo.name,
-    moduleRecordCacheKey(OWNER, task.repo.name, task.fingerprint)
-  ]))
-  const records = await readD1JsonMap<ModuleRecord>([...keysByRepo.values()])
+  const keysByRepo = new Map<string, string>()
+  const records = new Map<string, ModuleRecord>()
+
+  for (const task of tasks) {
+    if (prefetchedRecords.has(task.repo.name)) continue
+    keysByRepo.set(task.repo.name, moduleRecordCacheKey(OWNER, task.repo.name, task.fingerprint))
+  }
+
+  for (const [key, record] of await readD1JsonMap<ModuleRecord>([...keysByRepo.values()])) {
+    records.set(key, record)
+  }
 
   for (const task of tasks) {
     const key = keysByRepo.get(task.repo.name)
-    const record = key ? records.get(key) : null
+    const record = prefetchedRecords.has(task.repo.name)
+      ? prefetchedRecords.get(task.repo.name)
+      : key ? records.get(key) : null
     if (record?.fingerprint === task.fingerprint) {
       console.log(`[d1-cache] Restored ${OWNER}/${task.repo.name} from D1`)
       await restoreD1CachedReadme(record)
