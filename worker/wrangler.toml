@@ -1,5 +1,6 @@
 name = "modules-webhook-debouncer"
 main = "src/index.ts"
+account_id = "8911df62bfddad67b7d7e84ae666bc87"
 compatibility_date = "2026-05-11"
 
 [triggers]
