@@ -2,6 +2,9 @@ name = "modules-webhook-debouncer"
 main = "src/index.ts"
 compatibility_date = "2026-05-11"
 
+[triggers]
+crons = ["17 20 * * *"]
+
 [[durable_objects.bindings]]
 name = "DEBOUNCER"
 class_name = "WebhookDebouncer"
@@ -29,9 +32,19 @@ new_sqlite_classes = ["WebhookDebouncer"]
 GITHUB_OWNER = "Xposed-Modules-Repo"
 QUIET_SECONDS = "120"
 PENDING_TTL_SECONDS = "3600"
+LSPOSED_UPDATE_URL = "https://lsposed.zip/update.json"
+EDGEONE_API_HOST = "teo.tencentcloudapi.com"
+EDGEONE_TOKEN_RETENTION_DAYS = "7"
+EDGEONE_AUTH_PARAM = "sign"
+EDGEONE_TIME_PARAM = "t"
 
 # Configure as secrets:
 # wrangler secret put GITHUB_WEBHOOK_SECRET -c worker/wrangler.toml
 # wrangler secret put PAGES_DEPLOY_HOOK_URL -c worker/wrangler.toml
 # wrangler secret put DIRTY_REPOS_TOKEN -c worker/wrangler.toml
 # Optional: wrangler secret put D1_CACHE_TOKEN -c worker/wrangler.toml
+# Optional EdgeOne token timeout extension:
+# wrangler secret put EDGEONE_SECRET_ID -c worker/wrangler.toml
+# wrangler secret put EDGEONE_SECRET_KEY -c worker/wrangler.toml
+# wrangler secret put EDGEONE_ZONE_ID -c worker/wrangler.toml
+# wrangler secret put EDGEONE_L7_RULE_ID -c worker/wrangler.toml

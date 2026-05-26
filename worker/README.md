@@ -16,6 +16,25 @@ npx wrangler secret put PAGES_DEPLOY_HOOK_URL -c worker/wrangler.toml
 npx wrangler secret put DIRTY_REPOS_TOKEN -c worker/wrangler.toml
 ```
 
+Optional EdgeOne token timeout extension:
+
+```sh
+npx wrangler secret put EDGEONE_SECRET_ID -c worker/wrangler.toml
+npx wrangler secret put EDGEONE_SECRET_KEY -c worker/wrangler.toml
+npx wrangler secret put EDGEONE_ZONE_ID -c worker/wrangler.toml
+npx wrangler secret put EDGEONE_L7_RULE_ID -c worker/wrangler.toml
+```
+
+The scheduled Worker checks `https://lsposed.zip/update.json` once per day and stores the last observed LSPosed version in the existing Durable Object. When `versionCode` changes, the EdgeOne token timeout is reset to 7 days. If the version is unchanged, the timeout is extended by one day relative to the first time that version was observed.
+
+Manual checks:
+
+```sh
+curl -H "Authorization: Bearer <DIRTY_REPOS_TOKEN>" https://<worker-host>/edgeone/status
+curl -X POST -H "Authorization: Bearer <DIRTY_REPOS_TOKEN>" "https://<worker-host>/edgeone/refresh?dry=1"
+curl -X POST -H "Authorization: Bearer <DIRTY_REPOS_TOKEN>" https://<worker-host>/edgeone/refresh
+```
+
 The Worker also exposes a private D1 REST-compatible query endpoint for build-time cache access. It uses the metadata, README, and release D1 bindings in `wrangler.toml` and accepts `Authorization: Bearer <token>`, where the token is `D1_CACHE_TOKEN` if configured, otherwise `DIRTY_REPOS_TOKEN`.
 
 GitHub webhook URL:

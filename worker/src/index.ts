@@ -10,6 +10,15 @@ export interface Env {
   GITHUB_OWNER?: string
   QUIET_SECONDS?: string
   PENDING_TTL_SECONDS?: string
+  LSPOSED_UPDATE_URL?: string
+  EDGEONE_SECRET_ID?: string
+  EDGEONE_SECRET_KEY?: string
+  EDGEONE_ZONE_ID?: string
+  EDGEONE_L7_RULE_ID?: string
+  EDGEONE_API_HOST?: string
+  EDGEONE_TOKEN_RETENTION_DAYS?: string
+  EDGEONE_AUTH_PARAM?: string
+  EDGEONE_TIME_PARAM?: string
 }
 
 interface WebhookPayload {
@@ -28,6 +37,28 @@ interface PendingRepos {
   triggeredAt: number
 }
 
+interface LsposedUpdateInfo {
+  version?: string
+  versionCode?: number
+}
+
+interface EdgeOneReleaseState {
+  versionKey: string
+  version?: string
+  versionCode?: number
+  firstSeenAt: number
+  lastSeenAt: number
+  timeoutSeconds: number
+  appliedTimeoutSeconds?: number
+  appliedAt?: number
+  lastError?: string
+}
+
+const EDGEONE_RELEASE_STATE_KEY = 'edgeoneReleaseState'
+const DAY_SECONDS = 24 * 60 * 60
+const DAY_MS = DAY_SECONDS * 1000
+const MAX_AUTH_TIMEOUT_SECONDS = 630_720_000
+
 export default {
   async fetch (request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
@@ -37,6 +68,14 @@ export default {
 
     const id = env.DEBOUNCER.idFromName('global')
     return env.DEBOUNCER.get(id).fetch(request)
+  },
+
+  async scheduled (_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const id = env.DEBOUNCER.idFromName('global')
+    ctx.waitUntil(env.DEBOUNCER.get(id).fetch(new Request('https://internal/edgeone/refresh', {
+      method: 'POST',
+      headers: { 'x-internal-scheduled': '1' }
+    })))
   }
 }
 
@@ -59,6 +98,24 @@ export class WebhookDebouncer {
 
     if (url.pathname === '/health') {
       return json({ ok: true })
+    }
+
+    if (url.pathname === '/edgeone/refresh' && (request.method === 'GET' || request.method === 'POST')) {
+      if (!isInternalScheduled(request) && !isAuthorized(request, this.env.DIRTY_REPOS_TOKEN)) {
+        return json({ error: 'unauthorized' }, 401)
+      }
+
+      return this.handleEdgeOneRefresh(url.searchParams.get('dry') === '1')
+    }
+
+    if (url.pathname === '/edgeone/status' && request.method === 'GET') {
+      if (!isAuthorized(request, this.env.DIRTY_REPOS_TOKEN)) {
+        return json({ error: 'unauthorized' }, 401)
+      }
+
+      return json({
+        state: await this.state.storage.get<EdgeOneReleaseState>(EDGEONE_RELEASE_STATE_KEY) || null
+      })
     }
 
     return json({ error: 'not_found' }, 404)
@@ -151,6 +208,23 @@ export class WebhookDebouncer {
       triggeredAt: pending ? new Date(pending.triggeredAt).toISOString() : null
     })
   }
+
+  private async handleEdgeOneRefresh (dryRun: boolean): Promise<Response> {
+    try {
+      const result = await refreshEdgeOneTokenTimeout(this.env, this.state.storage, dryRun)
+      return json(result)
+    } catch (error) {
+      const previous = await this.state.storage.get<EdgeOneReleaseState>(EDGEONE_RELEASE_STATE_KEY)
+      if (previous) {
+        await this.state.storage.put(EDGEONE_RELEASE_STATE_KEY, {
+          ...previous,
+          lastError: (error as Error).message
+        })
+      }
+
+      return json({ error: (error as Error).message }, 500)
+    }
+  }
 }
 
 function normalizeRepoName (fullName: string | undefined, owner: string | undefined): string | null {
@@ -193,6 +267,298 @@ function timingSafeEqual (left: string, right: string): boolean {
 function isAuthorized (request: Request, token: string | undefined): boolean {
   if (!token) return true
   return request.headers.get('authorization') === `Bearer ${token}`
+}
+
+function isInternalScheduled (request: Request): boolean {
+  return request.headers.get('x-internal-scheduled') === '1'
+}
+
+async function refreshEdgeOneTokenTimeout (
+  env: Env,
+  storage: DurableObjectStorage,
+  dryRun: boolean
+): Promise<unknown> {
+  const updateInfo = await fetchLsposedUpdateInfo(env)
+  const versionKey = getUpdateVersionKey(updateInfo)
+  const previous = await storage.get<EdgeOneReleaseState>(EDGEONE_RELEASE_STATE_KEY)
+  const now = Date.now()
+  const versionChanged = previous?.versionKey !== versionKey
+  const firstSeenAt = versionChanged ? now : previous.firstSeenAt
+  const retentionDays = parsePositiveInt(env.EDGEONE_TOKEN_RETENTION_DAYS, 7)
+  const ageDays = Math.max(0, Math.ceil((now - firstSeenAt) / DAY_MS))
+  const timeoutSeconds = Math.min(MAX_AUTH_TIMEOUT_SECONDS, (retentionDays + ageDays) * DAY_SECONDS)
+  const configured = isEdgeOneConfigured(env)
+  const nextState: EdgeOneReleaseState = {
+    versionKey,
+    version: updateInfo.version,
+    versionCode: updateInfo.versionCode,
+    firstSeenAt,
+    lastSeenAt: now,
+    timeoutSeconds,
+    appliedTimeoutSeconds: previous?.appliedTimeoutSeconds,
+    appliedAt: previous?.appliedAt
+  }
+
+  if (dryRun) {
+    return {
+      ok: true,
+      dryRun,
+      configured,
+      versionChanged,
+      version: updateInfo.version,
+      versionCode: updateInfo.versionCode,
+      timeoutSeconds,
+      timeoutDays: timeoutSeconds / DAY_SECONDS,
+      applied: false
+    }
+  }
+
+  if (!configured) {
+    await storage.put(EDGEONE_RELEASE_STATE_KEY, nextState)
+    return {
+      ok: true,
+      configured,
+      versionChanged,
+      version: updateInfo.version,
+      versionCode: updateInfo.versionCode,
+      timeoutSeconds,
+      timeoutDays: timeoutSeconds / DAY_SECONDS,
+      applied: false
+    }
+  }
+
+  if (previous?.appliedTimeoutSeconds === timeoutSeconds) {
+    await storage.put(EDGEONE_RELEASE_STATE_KEY, nextState)
+    return {
+      ok: true,
+      versionChanged,
+      version: updateInfo.version,
+      versionCode: updateInfo.versionCode,
+      timeoutSeconds,
+      timeoutDays: timeoutSeconds / DAY_SECONDS,
+      applied: false,
+      reason: 'unchanged'
+    }
+  }
+
+  const edgeOneResult = await updateEdgeOneAuthenticationTimeout(env, timeoutSeconds)
+  await storage.put(EDGEONE_RELEASE_STATE_KEY, {
+    ...nextState,
+    appliedTimeoutSeconds: timeoutSeconds,
+    appliedAt: now
+  })
+
+  return {
+    ok: true,
+    versionChanged,
+    version: updateInfo.version,
+    versionCode: updateInfo.versionCode,
+    timeoutSeconds,
+    timeoutDays: timeoutSeconds / DAY_SECONDS,
+    applied: edgeOneResult.changed,
+    edgeOne: edgeOneResult
+  }
+}
+
+async function fetchLsposedUpdateInfo (env: Env): Promise<LsposedUpdateInfo> {
+  const updateUrl = env.LSPOSED_UPDATE_URL || 'https://lsposed.zip/update.json'
+  const response = await fetch(updateUrl, {
+    headers: { accept: 'application/json' },
+    cf: { cacheTtl: 0, cacheEverything: false }
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to fetch LSPosed update info: ${response.status}`)
+  }
+
+  const payload = await response.json() as LsposedUpdateInfo
+  if (typeof payload.versionCode !== 'number' && typeof payload.version !== 'string') {
+    throw new Error('LSPosed update info does not include versionCode or version')
+  }
+  return payload
+}
+
+function getUpdateVersionKey (updateInfo: LsposedUpdateInfo): string {
+  if (typeof updateInfo.versionCode === 'number') return `versionCode:${updateInfo.versionCode}`
+  return `version:${updateInfo.version || ''}`
+}
+
+function isEdgeOneConfigured (env: Env): boolean {
+  return Boolean(
+    env.EDGEONE_SECRET_ID &&
+    env.EDGEONE_SECRET_KEY &&
+    env.EDGEONE_ZONE_ID &&
+    env.EDGEONE_L7_RULE_ID
+  )
+}
+
+async function updateEdgeOneAuthenticationTimeout (
+  env: Env,
+  timeoutSeconds: number
+): Promise<{ changed: boolean, previousTimeouts: number[], updatedActions: number }> {
+  const rule = await describeEdgeOneRule(env)
+  const authActions = findAuthenticationActions(
+    rule,
+    env.EDGEONE_AUTH_PARAM || 'sign',
+    env.EDGEONE_TIME_PARAM || 't'
+  )
+
+  if (!authActions.length) {
+    throw new Error('EdgeOne rule does not contain a matching Authentication action')
+  }
+
+  const previousTimeouts = authActions.map(action => action.AuthenticationParameters?.Timeout)
+    .filter((value): value is number => typeof value === 'number')
+  const changed = previousTimeouts.length !== authActions.length ||
+    previousTimeouts.some(timeout => timeout !== timeoutSeconds)
+
+  if (!changed) {
+    return { changed: false, previousTimeouts, updatedActions: authActions.length }
+  }
+
+  for (const action of authActions) {
+    action.AuthenticationParameters ||= {}
+    action.AuthenticationParameters.Timeout = timeoutSeconds
+  }
+
+  await edgeOneRequest(env, 'ModifyL7AccRule', {
+    ZoneId: env.EDGEONE_ZONE_ID,
+    Rule: rule
+  })
+
+  return { changed: true, previousTimeouts, updatedActions: authActions.length }
+}
+
+async function describeEdgeOneRule (env: Env): Promise<Record<string, any>> {
+  const payload = await edgeOneRequest(env, 'DescribeL7AccRules', {
+    ZoneId: env.EDGEONE_ZONE_ID,
+    Filters: [
+      {
+        Name: 'rule-id',
+        Values: [env.EDGEONE_L7_RULE_ID]
+      }
+    ],
+    Limit: 1
+  }) as { Response?: { Rules?: Array<Record<string, any>> } }
+
+  const rule = payload.Response?.Rules?.find(rule => rule.RuleId === env.EDGEONE_L7_RULE_ID)
+  if (!rule) throw new Error('EdgeOne rule was not found')
+  return rule
+}
+
+function findAuthenticationActions (
+  node: unknown,
+  authParam: string,
+  timeParam: string
+): Array<Record<string, any>> {
+  const result: Array<Record<string, any>> = []
+  walkRuleNode(node, value => {
+    if (!isObject(value)) return
+    if (value.Name !== 'Authentication') return
+
+    const parameters = isObject(value.AuthenticationParameters) ? value.AuthenticationParameters : undefined
+    if (!parameters) return
+    if (parameters.AuthParam !== authParam || parameters.TimeParam !== timeParam) return
+
+    result.push(value)
+  })
+  return result
+}
+
+function walkRuleNode (node: unknown, visit: (value: unknown) => void): void {
+  visit(node)
+  if (Array.isArray(node)) {
+    for (const item of node) walkRuleNode(item, visit)
+  } else if (isObject(node)) {
+    for (const value of Object.values(node)) walkRuleNode(value, visit)
+  }
+}
+
+function isObject (value: unknown): value is Record<string, any> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+async function edgeOneRequest (env: Env, action: string, payload: unknown): Promise<unknown> {
+  const secretId = requireEnv(env.EDGEONE_SECRET_ID, 'EDGEONE_SECRET_ID')
+  const secretKey = requireEnv(env.EDGEONE_SECRET_KEY, 'EDGEONE_SECRET_KEY')
+  const host = env.EDGEONE_API_HOST || 'teo.tencentcloudapi.com'
+  const service = 'teo'
+  const version = '2022-09-01'
+  const body = JSON.stringify(payload)
+  const timestamp = Math.floor(Date.now() / 1000)
+  const date = new Date(timestamp * 1000).toISOString().slice(0, 10)
+  const signedHeaders = 'content-type;host;x-tc-action'
+  const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${host}\nx-tc-action:${action.toLowerCase()}\n`
+  const canonicalRequest = [
+    'POST',
+    '/',
+    '',
+    canonicalHeaders,
+    signedHeaders,
+    await sha256Hex(body)
+  ].join('\n')
+  const credentialScope = `${date}/${service}/tc3_request`
+  const stringToSign = [
+    'TC3-HMAC-SHA256',
+    String(timestamp),
+    credentialScope,
+    await sha256Hex(canonicalRequest)
+  ].join('\n')
+  const secretDate = await hmacSha256(`TC3${secretKey}`, date)
+  const secretService = await hmacSha256(secretDate, service)
+  const secretSigning = await hmacSha256(secretService, 'tc3_request')
+  const signature = toHex(await hmacSha256(secretSigning, stringToSign))
+  const authorization = `TC3-HMAC-SHA256 Credential=${secretId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+
+  const response = await fetch(`https://${host}`, {
+    method: 'POST',
+    headers: {
+      Authorization: authorization,
+      'Content-Type': 'application/json; charset=utf-8',
+      'X-TC-Action': action,
+      'X-TC-Timestamp': String(timestamp),
+      'X-TC-Version': version
+    },
+    body
+  })
+  const text = await response.text()
+  if (!response.ok) throw new Error(`EdgeOne API ${action} failed: ${response.status} ${text}`)
+
+  const json = JSON.parse(text) as { Response?: { Error?: { Code?: string, Message?: string } } }
+  if (json.Response?.Error) {
+    throw new Error(`EdgeOne API ${action} failed: ${json.Response.Error.Code || 'Error'} ${json.Response.Error.Message || ''}`.trim())
+  }
+
+  return json
+}
+
+function requireEnv (value: string | undefined, name: string): string {
+  if (!value) throw new Error(`${name} is not configured`)
+  return value
+}
+
+function parsePositiveInt (value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value || '', 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+async function sha256Hex (input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
+  return toHex(digest)
+}
+
+async function hmacSha256 (key: string | ArrayBuffer, input: string): Promise<ArrayBuffer> {
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    typeof key === 'string' ? new TextEncoder().encode(key) : key,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  return crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(input))
+}
+
+function toHex (buffer: ArrayBuffer): string {
+  return [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
 function isD1QueryPath (pathname: string): boolean {
