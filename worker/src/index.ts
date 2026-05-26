@@ -422,7 +422,7 @@ async function updateEdgeOneAuthenticationTimeout (
 
   await edgeOneRequest(env, 'ModifyL7AccRule', {
     ZoneId: env.EDGEONE_ZONE_ID,
-    Rule: rule
+    Rule: toWritableEdgeOneRule(rule)
   })
 
   return { changed: true, previousTimeouts, updatedActions: authActions.length }
@@ -443,6 +443,17 @@ async function describeEdgeOneRule (env: Env): Promise<Record<string, any>> {
   const rule = payload.Response?.Rules?.find(rule => rule.RuleId === env.EDGEONE_L7_RULE_ID)
   if (!rule) throw new Error('EdgeOne rule was not found')
   return rule
+}
+
+function toWritableEdgeOneRule (rule: Record<string, any>): Record<string, any> {
+  const writable: Record<string, any> = {
+    RuleId: rule.RuleId,
+    RuleName: rule.RuleName,
+    Status: rule.Status,
+    Branches: rule.Branches
+  }
+  if ('Description' in rule) writable.Description = rule.Description
+  return writable
 }
 
 function findAuthenticationActions (
