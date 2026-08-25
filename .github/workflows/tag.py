@@ -55,7 +55,7 @@ def main():
     remote.push(tag_name, force=True)
 
     resp = requests.patch(
-        f"https://api.github.com/repos/{repo}/releases/{release}",
+        f"https://api.github.com/repos/{repo_name}/releases/{release}",
         data={"tag_name": tag_name},
         headers={
             "Accept": "application/vnd.github.v3+json",
