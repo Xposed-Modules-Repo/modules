@@ -21,12 +21,19 @@ def main():
         with BytesIO(resp.content) as zip_buffer:
             with ZipFile(zip_buffer) as zf:
                 fn = "AndroidManifest.xml"
-                if fn in zf.namelist():
+                fl = zf.namelist()
+                if fn in fl and (
+                    "assets/xposed_init" in fl
+                    or "META-INF/xposed/java_init.list" in fl
+                    or "META-INF/xposed/native_init.list" in fl
+                ):
                     with zf.open(fn) as f:
                         p = AXMLPrinter(f.read())
                         package = p.package
                         versionCode = p.androidversion["Code"]
                         versionName = p.androidversion["Name"]
+                else:
+                    raise RuntimeError("apk is not a Xposed module")
 
     if package != repo:
         raise RuntimeError("package name mismatched")
