@@ -28,5 +28,7 @@ jobs:
       TAG_TOKEN: ${{ secrets.TAG_TOKEN }}
     steps:
       - run: |
+          pwd
+          ls -lah
           pip install requests axml GitPython
-          python /home/runner/work/modules/.github/workflows/tag.py
+          python .github/workflows/tag.py
