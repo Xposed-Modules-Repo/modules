@@ -35,8 +35,9 @@ def main():
                 else:
                     raise RuntimeError("apk is not a Xposed module")
 
-    if package != org_repo if "/" not in org_repo else org_repo.split("/")[1]:
-        raise RuntimeError("package name mismatched")
+    repo_name = org_repo if "/" not in org_repo else org_repo.split("/")[1]
+    if package != repo_name:
+        raise RuntimeError(f"package name mismatched {package} != {repo_name}")
 
     tag_name = f"{versionCode}-{versionName}"
 
