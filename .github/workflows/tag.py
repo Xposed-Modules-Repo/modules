@@ -1,3 +1,5 @@
+from builtins import RuntimeError
+
 import requests
 from io import BytesIO
 from zipfile import ZipFile
