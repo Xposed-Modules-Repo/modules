@@ -42,11 +42,16 @@ def main():
     tag_name = f"{versionCode}-{versionName}"
 
     repo = git.Repo.init("./temp.git")
-    repo.config_writer("repository").set_value("user", "name", "github-actions[bot]")
-    repo.config_writer("repository").set_value("user", "email", "41898282+github-actions[bot]@users.noreply.github.com")
+    repo.config_writer("repository").set_value(
+        "user", "name", "github-actions[bot]"
+    ).set_value(
+        "user", "email", "41898282+github-actions[bot]@users.noreply.github.com"
+    ).write()
     repo.index.commit(tag_name)
     repo.create_tag(tag_name, message=tag_name, force=True)
-    remote = repo.create_remote("origin", f"https://{tag_token}@github.com/{org_repo}.git")
+    remote = repo.create_remote(
+        "origin", f"https://{tag_token}@github.com/{org_repo}.git"
+    )
     remote.push(tag_name, force=True)
 
     resp = requests.patch(
