@@ -18,7 +18,7 @@ def main():
 
     with requests.get(apk, stream=True, timeout=10) as r:
         r.raise_for_status()
-        with BytesIO(resp.content) as zip_buffer:
+        with BytesIO(r.content) as zip_buffer:
             with ZipFile(zip_buffer) as zf:
                 fn = "AndroidManifest.xml"
                 fl = zf.namelist()
