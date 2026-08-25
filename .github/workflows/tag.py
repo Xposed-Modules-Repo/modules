@@ -7,7 +7,7 @@ import git
 
 
 def main():
-    repo = getenv("REPO")
+    org_repo = getenv("REPO")
     release = getenv("RELEASE")
     apk = getenv("APK")
     tag_name = getenv("TAG")
@@ -35,7 +35,7 @@ def main():
                 else:
                     raise RuntimeError("apk is not a Xposed module")
 
-    if package != repo:
+    if package != org_repo if "/" not in org_repo else org_repo.split("/")[1]:
         raise RuntimeError("package name mismatched")
 
     tag_name = f"{versionCode}-{versionName}"
@@ -47,7 +47,7 @@ def main():
     repo = git.Repo.init("./temp.git")
     repo.index.commit(tag_name, author=author)
     repo.create_tag(tag_name, message=tag_name, force=True)
-    remote = repo.create_remote("origin", f"https://{tag_token}@github.com/{repo}.git")
+    remote = repo.create_remote("origin", f"https://{tag_token}@github.com/{org_repo}.git")
     remote.push(tag_name, force=True)
 
     resp = requests.patch(
