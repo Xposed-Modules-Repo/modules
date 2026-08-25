@@ -27,8 +27,11 @@ jobs:
       TAG: ${{ github.event.inputs.tag }}
       TAG_TOKEN: ${{ secrets.TAG_TOKEN }}
     steps:
-      - run: |
-          pwd
-          ls -lah
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Tagging
+        run: |
           pip install requests axml GitPython
           python .github/workflows/tag.py
