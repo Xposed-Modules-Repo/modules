@@ -56,7 +56,7 @@ def main():
 
     resp = requests.patch(
         f"https://api.github.com/repos/{org_repo}/releases/{release}",
-        data={"tag_name": tag_name},
+        json={"tag_name": tag_name},
         headers={
             "Accept": "application/vnd.github.v3+json",
             "Authorization": f"Bearer {tag_token}",
