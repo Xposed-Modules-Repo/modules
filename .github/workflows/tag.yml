@@ -29,4 +29,4 @@ jobs:
     steps:
       - run: |
           pip install requests axml GitPython
-          python .github/workflows/tag.py
+          python /home/runner/work/modules/.github/workflows/tag.py
