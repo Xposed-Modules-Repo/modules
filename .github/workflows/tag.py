@@ -19,6 +19,8 @@ def main():
         raise RuntimeError("TAG_TOKEN is missing")
 
     with requests.get(apk, stream=True, timeout=10) as r:
+        if r.status_code == 404 or r.status_code == 422:
+            return
         r.raise_for_status()
         with BytesIO(r.content) as zip_buffer:
             with ZipFile(zip_buffer) as zf:
