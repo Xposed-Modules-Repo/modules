@@ -47,7 +47,7 @@ def main():
                         p = AXMLPrinter(f.read())
                         package = p.package
                         versionCode = p.androidversion["Code"]
-                        versionName = p.androidversion["Name"]
+                        versionName = "_".join(p.androidversion["Name"].split())
                 else:
                     update_release(bearer_token, org_repo, release, {"draft": True})
                     return
