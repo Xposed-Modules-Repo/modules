@@ -32,6 +32,7 @@ new_sqlite_classes = ["WebhookDebouncer"]
 [vars]
 GITHUB_OWNER = "Xposed-Modules-Repo"
 QUIET_SECONDS = "120"
+MIN_DEPLOY_INTERVAL_SECONDS = "900"
 PENDING_TTL_SECONDS = "3600"
 LSPOSED_UPDATE_URL = "https://lsposed.zip/update.json"
 EDGEONE_API_HOST = "teo.tencentcloudapi.com"

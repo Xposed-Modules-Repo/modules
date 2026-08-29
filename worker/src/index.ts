@@ -9,6 +9,7 @@ export interface Env {
   D1_CACHE_TOKEN?: string
   GITHUB_OWNER?: string
   QUIET_SECONDS?: string
+  MIN_DEPLOY_INTERVAL_SECONDS?: string
   PENDING_TTL_SECONDS?: string
   LSPOSED_UPDATE_URL?: string
   EDGEONE_SECRET_ID?: string
@@ -130,6 +131,15 @@ export class WebhookDebouncer {
       return
     }
 
+    const lastTriggeredAt = await this.state.storage.get<number>('lastTriggeredAt') || 0
+    const minimumIntervalMs = durationSeconds(this.env.MIN_DEPLOY_INTERVAL_SECONDS, 15 * 60) * 1000
+    const earliestTriggerAt = lastTriggeredAt + minimumIntervalMs
+    if (Date.now() + 500 < earliestTriggerAt) {
+      await this.state.storage.put('scheduledAt', earliestTriggerAt)
+      await this.state.storage.setAlarm(earliestTriggerAt)
+      return
+    }
+
     const dirtyRepos = await this.state.storage.get<string[]>('dirtyRepos') || []
 
     if (!dirtyRepos.length) return
@@ -172,11 +182,17 @@ export class WebhookDebouncer {
     const dirtyRepos = new Set(await this.state.storage.get<string[]>('dirtyRepos') || [])
     dirtyRepos.add(repoName)
 
-    const quietMs = Number.parseInt(this.env.QUIET_SECONDS || '120', 10) * 1000
-    const scheduledAt = Date.now() + Math.max(quietMs, 10_000)
+    const now = Date.now()
+    const quietMs = durationSeconds(this.env.QUIET_SECONDS, 120) * 1000
+    const minimumIntervalMs = durationSeconds(this.env.MIN_DEPLOY_INTERVAL_SECONDS, 15 * 60) * 1000
+    const lastTriggeredAt = await this.state.storage.get<number>('lastTriggeredAt') || 0
+    const scheduledAt = Math.max(
+      now + Math.max(quietMs, 10_000),
+      lastTriggeredAt + minimumIntervalMs
+    )
 
     await this.state.storage.put('dirtyRepos', [...dirtyRepos].sort())
-    await this.state.storage.put('lastEventAt', Date.now())
+    await this.state.storage.put('lastEventAt', now)
     await this.state.storage.put('scheduledAt', scheduledAt)
     await this.state.storage.setAlarm(scheduledAt)
 
@@ -225,6 +241,11 @@ export class WebhookDebouncer {
       return json({ error: (error as Error).message }, 500)
     }
   }
+}
+
+function durationSeconds (value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value || '', 10)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
 }
 
 function normalizeRepoName (fullName: string | undefined, owner: string | undefined): string | null {

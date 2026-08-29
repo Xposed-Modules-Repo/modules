@@ -1,6 +1,6 @@
 # Webhook Debounce Worker
 
-This Worker verifies GitHub webhooks, stores dirty repositories in a Durable Object, waits for a quiet period, then triggers one Cloudflare Pages deploy hook.
+This Worker verifies GitHub webhooks, stores dirty repositories in a Durable Object, waits for a quiet period, then triggers one Cloudflare Pages deploy hook. Deploys are limited to one every 15 minutes by default; repositories received during the cooldown remain queued for the next build.
 
 ## Deploy
 
@@ -43,16 +43,18 @@ GitHub webhook URL:
 https://<worker-host>/webhook
 ```
 
-Cloudflare Pages build environment:
+Preferred Cloudflare Pages build environment:
 
 ```text
 DIRTY_REPOS_ENDPOINT=https://<worker-host>/dirty?consume=1
 DIRTY_REPOS_TOKEN=<same token as worker secret>
-D1_CACHE_ENDPOINT=https://<worker-host>
+D1_CACHE_API_TOKEN=<Cloudflare API token with D1 edit access>
 D1_CACHE_METADATA_DATABASE_ID=65e5b2d4-c6c3-4c1f-8eb1-17dde6c8a41d
 D1_CACHE_README_DATABASE_ID=d65705d6-c416-43b7-9cc7-f8a7971ce464
 D1_CACHE_RELEASE_DATABASE_ID=998dbc82-4265-434d-a0ae-8b64cd708405
 D1_CACHE_ACCOUNT_ID=8911df62bfddad67b7d7e84ae666bc87
 ```
+
+If a Cloudflare API token cannot be used, set `D1_CACHE_ENDPOINT=https://<worker-host>` and use `D1_CACHE_TOKEN` instead. Every D1 query then counts as a Worker request, so this fallback is unsuitable for frequent builds.
 
 When the build starts, the Astro pipeline reads the dirty list. If the local cache is available, it refreshes only those repositories; if the cache is missing, it falls back to a full GitHub inventory scan.
