@@ -6,7 +6,6 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 from zipfile import ZipFile
-from sys import stdout
 
 import git
 import os
@@ -28,7 +27,7 @@ def update_release(session: Session, bearer_token, org_repo, release_id, data):
         },
     )
     if not resp.ok:
-        stdout.write(f"::error::{escape_data(resp.text)}")
+        print(f"::error::{escape_data(resp.text)}")
         os._exit(1)
 
 def main():
@@ -54,7 +53,7 @@ def main():
         if r.status_code == 404 or r.status_code == 422:
             return
         if not r.ok:
-            stdout.write(f"::error::{escape_data(r.text)}")
+            print(f"::error::{escape_data(r.text)}")
             os._exit(1)
         with BytesIO(r.content) as zip_buffer:
             with ZipFile(zip_buffer) as zf:
@@ -72,14 +71,14 @@ def main():
                         versionName = "_".join(p.androidversion["Name"].split())
                 else:
                     update_release(session, bearer_token, org_repo, release, {"draft": True})
-                    stdout.write(f"::error::{escape_data('apk is not a xposed module')}")
+                    print(f"::error::{escape_data('apk is not a xposed module')}")
                     os._exit(1)
                     return
 
     repo_name = org_repo if "/" not in org_repo else org_repo.split("/")[1]
     if package != repo_name:
         update_release(session, bearer_token, org_repo, release, {"draft": True})
-        stdout.write(f"::error::{escape_data('application id mismatched')}")
+        print(f"::error::{escape_data('application id mismatched')}")
         os._exit(1)
         return
 
