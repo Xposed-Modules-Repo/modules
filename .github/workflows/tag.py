@@ -27,6 +27,7 @@ def update_release(session: Session, bearer_token, org_repo, release_id, data):
         },
     )
     if not resp.ok:
+        print(resp.text)
         print(f"::error::{escape_data(resp.text)}")
         os._exit(1)
 
@@ -53,6 +54,7 @@ def main():
         if r.status_code == 404 or r.status_code == 422:
             return
         if not r.ok:
+            print(r.text)
             print(f"::error::{escape_data(r.text)}")
             os._exit(1)
         with BytesIO(r.content) as zip_buffer:
@@ -71,6 +73,7 @@ def main():
                         versionName = "_".join(p.androidversion["Name"].split())
                 else:
                     update_release(session, bearer_token, org_repo, release, {"draft": True})
+                    print('apk is not a xposed module')
                     print(f"::error::{escape_data('apk is not a xposed module')}")
                     os._exit(1)
                     return
@@ -78,6 +81,7 @@ def main():
     repo_name = org_repo if "/" not in org_repo else org_repo.split("/")[1]
     if package != repo_name:
         update_release(session, bearer_token, org_repo, release, {"draft": True})
+        print('application id mismatched')
         print(f"::error::{escape_data('application id mismatched')}")
         os._exit(1)
         return
