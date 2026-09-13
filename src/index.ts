@@ -33,7 +33,7 @@ async function httpGetRange(requestUrl: string, from: number, to: number) {
     range: `bytes=${from}-${to}`,
   })
   const statusCode = response.message.statusCode
-  if (statusCode && statusCode >= 200 && statusCode < 300) {
+  if (statusCode && !(statusCode >= 200 && statusCode < 300)) {
     throw Error(
       `http error: ${response.message.statusCode} ${await response.readBody()}`,
     )
