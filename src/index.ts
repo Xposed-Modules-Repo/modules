@@ -86,19 +86,19 @@ async function main() {
       draft: true,
     })
   }
-  const setReleaseTag = async (tagName: string) => {
+  const setReleaseTag = async (newTagName: string) => {
     await octokit.rest.repos.updateRelease({
       owner,
       repo,
       release_id: releaseId,
-      tag_name: tagName,
+      tag_name: newTagName,
     })
   }
-  const createEmptyCommit = async (tagName: string) => {
+  const createEmptyCommit = async (newTagName: string) => {
     const { data: orphanCommit } = await octokit.rest.git.createCommit({
       owner,
       repo,
-      message: tagName,
+      message: newTagName,
       // https://github.com/git/git/blob/master/t/oid-info/hash-info
       tree: "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
       parents: [],
@@ -111,7 +111,7 @@ async function main() {
     await octokit.rest.git.createRef({
       owner,
       repo,
-      ref: `refs/tags/${tagName}`,
+      ref: `refs/tags/${newTagName}`,
       sha: orphanCommit.sha,
     })
   }
@@ -271,7 +271,7 @@ async function main() {
   const newTagName = `${androidManifest.versionCode}-${androidManifest.versionName}`
   if (tagName === newTagName) return
   try {
-    await createEmptyCommit(tagName)
+    await createEmptyCommit(newTagName)
   } catch (e) {
     if (e instanceof Error || typeof e === "string") {
       setFailed(e)
@@ -281,7 +281,7 @@ async function main() {
   }
 
   try {
-    await setReleaseTag(tagName)
+    await setReleaseTag(newTagName)
   } catch (e) {
     if (e instanceof Error || typeof e === "string") {
       setFailed(e)
