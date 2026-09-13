@@ -102,6 +102,10 @@ async function main() {
       // https://github.com/git/git/blob/master/t/oid-info/hash-info
       tree: "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
       parents: [],
+      author: {
+        name: "github-actions[bot]",
+        email: "41898282+github-actions[bot]@users.noreply.github.com",
+      },
     })
 
     await octokit.rest.git.createRef({
