@@ -3,9 +3,9 @@ import { setFailed, info, warning, startGroup, endGroup } from "@actions/core"
 import { HttpClient } from "@actions/http-client"
 import { inflateRawSync } from "node:zlib"
 import { getOctokit } from "@actions/github"
-import type { GitHub } from "@actions/github/lib/utils"
 import { ApkError, CD, EOCD, LFH } from "./pkzip.js"
 import { AndroidManifest } from "./axml.js"
+import { RequestError } from "@octokit/request-error"
 
 const httpClient = new HttpClient(
   "XposedBot/1.0 (+https://github.com/Xposed-Modules-Repo)",
@@ -108,12 +108,25 @@ async function main() {
       },
     })
 
-    await octokit.rest.git.createRef({
-      owner,
-      repo,
-      ref: `refs/tags/${newTagName}`,
-      sha: orphanCommit.sha,
-    })
+    try {
+      await octokit.rest.git.createRef({
+        owner,
+        repo,
+        ref: `refs/tags/${newTagName}`,
+        sha: orphanCommit.sha,
+      })
+    } catch(e) {
+      if (e instanceof RequestError && e.status === 409) {
+        await octokit.rest.git.updateRef({
+          owner,
+          repo,
+          ref: `refs/tags/${newTagName}`,
+          sha: orphanCommit.sha,
+          force: true,
+        })
+      }
+      throw e
+    }
   }
 
   const head = await httpHead(apkUrl)

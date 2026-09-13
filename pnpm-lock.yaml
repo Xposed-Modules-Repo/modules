@@ -216,6 +216,9 @@ importers:
       '@actions/http-client':
         specifier: ^4.0.1
         version: 4.0.1
+      '@octokit/request-error':
+        specifier: ^7.1.2
+        version: 7.1.2
     devDependencies:
       '@types/node':
         specifier: ^22.20.2
