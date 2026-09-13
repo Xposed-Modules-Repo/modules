@@ -1,5 +1,5 @@
 import { env } from "node:process"
-import { setFailed, info, warning } from "@actions/core"
+import { setFailed, info, warning, startGroup, endGroup } from "@actions/core"
 import { HttpClient } from "@actions/http-client"
 import { inflateRawSync } from "node:zlib"
 import { getOctokit } from "@actions/github"
@@ -240,6 +240,8 @@ async function main() {
   info(`versionCode: ${androidManifest.versionCode}`)
   info(`versionname: ${androidManifest.versionName}`)
 
+  startGroup("details")
+
   if (isXposed && androidManifest.isXposed) {
     info(`xposedminversion: ${androidManifest.xposedMinVersion}`)
     if (androidManifest.isNewSXP) {
@@ -256,8 +258,11 @@ async function main() {
   } else {
     setFailed("this is not a valid Xposed module")
     await setDraft()
+    endGroup()
     return
   }
+
+  endGroup()
 
   const newTagName = `${androidManifest.versionCode}-${androidManifest.versionName}`
   if (tagName === newTagName) return
