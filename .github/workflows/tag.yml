@@ -17,6 +17,10 @@ on:
 
 run-name: Tag ${{ github.event.inputs.repo }}@${{ github.event.inputs.tag }}
 
+concurrency:
+  group: ${{ github.event.inputs.repo }}@${{ github.event.inputs.tag }}
+  cancel-in-progress: false
+
 jobs:
   update_tag:
     runs-on: ubuntu-latest
@@ -29,4 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/setup@v2
+        with:
+          cache: true
       - run: pnpm start
