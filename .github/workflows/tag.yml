@@ -31,7 +31,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
-      - name: Tagging
-        run: |
-          pip install requests axml GitPython
-          python .github/workflows/tag.py
+      # - name: Tagging
+      #   run: |
+      #     pip install requests axml GitPython
+      #     python .github/workflows/tag.py
+      - uses: pnpm/setup@v2
+      - run: pnpm start
