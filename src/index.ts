@@ -116,16 +116,26 @@ async function main() {
         sha: orphanCommit.sha,
       })
     } catch(e) {
-      if (e instanceof RequestError && e.status === 409) {
-        await octokit.rest.git.updateRef({
-          owner,
-          repo,
-          ref: `refs/tags/${newTagName}`,
-          sha: orphanCommit.sha,
-          force: true,
-        })
+      // if (e instanceof RequestError && e.status === 409) {
+      //   await octokit.rest.git.updateRef({
+      //     owner,
+      //     repo,
+      //     ref: `refs/tags/${newTagName}`,
+      //     sha: orphanCommit.sha,
+      //     force: true,
+      //   })
+      // }
+      // throw e
+      if (e instanceof Error || typeof e === "string") {
+        warning(e)
       }
-      throw e
+      await octokit.rest.git.updateRef({
+        owner,
+        repo,
+        ref: `refs/tags/${newTagName}`,
+        sha: orphanCommit.sha,
+        force: true,
+      })
     }
   }
 
