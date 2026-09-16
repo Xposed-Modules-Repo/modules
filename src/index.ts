@@ -148,6 +148,10 @@ async function main() {
     return
   }
   const totalSize = parseInt(contentLength)
+  if (totalSize < EOCD.HEADER_SIZE) {
+    setFailed("this is not a valid APK file")
+    await setDraft()
+  }
   let eocd: EOCD | undefined
   try {
     eocd = new EOCD(
