@@ -263,6 +263,7 @@ export async function writeD1Text (
   }
 
   const releaseId = metadata.releaseId || parts.releaseId || ''
+  const refreshBefore = now + Math.max(Math.floor(cfg.ttlSeconds / 4), 1)
   await query(
     cacheNamespace,
     `INSERT INTO release_html
@@ -278,8 +279,13 @@ export async function writeD1Text (
       stored_size = excluded.stored_size,
       updated_at = excluded.updated_at,
       accessed_at = excluded.accessed_at,
-      expires_at = excluded.expires_at`,
-    [key, owner, repoName, releaseId, encoded.valueGzipBase64, encoded.rawSize, storedSize, now, now, now, expiresAt]
+      expires_at = excluded.expires_at
+    WHERE release_html.cache_key IS NOT excluded.cache_key
+      OR release_html.value_gzip_b64 IS NOT excluded.value_gzip_b64
+      OR release_html.raw_size IS NOT excluded.raw_size
+      OR release_html.stored_size IS NOT excluded.stored_size
+      OR release_html.expires_at <= ?`,
+    [key, owner, repoName, releaseId, encoded.valueGzipBase64, encoded.rawSize, storedSize, now, now, now, expiresAt, refreshBefore]
   )
 }
 
