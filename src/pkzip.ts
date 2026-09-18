@@ -1,4 +1,5 @@
 export class LFH {
+  comp: number = 0
   compSize: number = 0
   decompSize: number = 0
   fnLen: number = 0
@@ -11,6 +12,7 @@ export class LFH {
   }
 
   constructor(buf: Buffer, cd?: CD) {
+    this.comp = buf.readUInt16LE(8)
     this.compSize = buf.readUInt32LE(18)
     this.decompSize = buf.readInt32LE(22)
     if (this.compSize <= 0 && cd !== undefined) cd.compSize

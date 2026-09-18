@@ -212,16 +212,16 @@ async function main() {
         ),
         cd,
       )
-      const bufDeflate = Buffer.from(
+      const bufRaw = Buffer.from(
         await httpGetRange(
           apkUrl,
           cd.fileOffset + lfh.size(),
           cd.fileOffset + lfh.size() + lfh.compSize,
         ),
       )
-
+      const buf = lfh.comp == 8 ? Buffer.from(inflateRawSync(bufRaw)) : bufRaw
       androidManifest = new AndroidManifest(
-        Buffer.from(inflateRawSync(bufDeflate)),
+        buf,
       )
     }
 
@@ -237,14 +237,15 @@ async function main() {
           cd.fileOffset + LFH.HEADER_SIZE,
         ),
       )
-      const bufDeflate = Buffer.from(
+      const bufRaw = Buffer.from(
         await httpGetRange(
           apkUrl,
           cd.fileOffset + lfh.size(),
           cd.fileOffset + lfh.size() + lfh.compSize,
         ),
       )
-      moduleProp = Buffer.from(inflateRawSync(bufDeflate)).toString().trim()
+      const buf = lfh.comp == 8 ? Buffer.from(inflateRawSync(bufRaw)) : bufRaw
+      moduleProp = buf.toString().trim()
       if (
         moduleProp.includes("minApiVersion=") &&
         moduleProp.includes("targetApiVersion=")
