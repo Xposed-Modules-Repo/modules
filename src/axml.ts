@@ -179,7 +179,7 @@ export class AndroidManifest {
     if (headerXML.size != ResChunk_header.SIZE) {
       throw Error("expected header size != ResChunk_header.SIZE")
     }
-    if (headerXML.chunkSize != chunk.length) {
+    if (headerXML.chunkSize > chunk.length) {
       throw Error("expected chunk size != AndroidManifest.xml size")
       return
     }
