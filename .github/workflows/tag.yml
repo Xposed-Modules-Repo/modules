@@ -35,4 +35,5 @@ jobs:
       - uses: pnpm/setup@v2
         with:
           cache: true
+          version: ^11.27.0
       - run: pnpm start
