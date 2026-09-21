@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   update_tag:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       REPO: ${{ github.event.inputs.repo }}
       RELEASE: ${{ github.event.inputs.release }}
