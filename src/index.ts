@@ -20,12 +20,12 @@ const httpClient = new HttpClient(
 
 async function httpHead(requestUrl: string) {
   const response = await httpClient.head(requestUrl)
-  if (response.message.statusCode != 200) {
+  if (response.message.statusCode != 200 && response.message.statusCode != 404) {
     throw Error(
       `http error: ${response.message.statusCode} ${await response.readBody()}`,
     )
   }
-  return response.message.headers
+  return response.message
 }
 
 async function httpGetRange(requestUrl: string, from: number, to: number) {
@@ -140,8 +140,9 @@ async function main() {
   }
 
   const head = await httpHead(apkUrl)
-  const contentType = head["content-type"]
-  const contentLength = head["content-length"]
+  if (head.statusCode == 404) return
+  const contentType = head.headers["content-type"]
+  const contentLength = head.headers["content-length"]
   if (contentType === undefined || contentLength === undefined) {
     setFailed("content-type or content-length is missing")
     await setDraft()
