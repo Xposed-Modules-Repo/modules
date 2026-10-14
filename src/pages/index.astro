@@ -15,7 +15,7 @@ const buildTime = new Date()
   <section class="page-heading">
     <div>
       <h1>Xposed Module Repository</h1>
-      <p>{data.listItems.length} modules, generated from GitHub releases on <span data-build-time={buildTime.toISOString()}>{1}</span>.</p>
+      <p>{data.listItems.length} modules, generated from GitHub releases on <span data-build-time={buildTime.toISOString()}>{buildTime.toLocaleString()}</span>.</p>
     </div>
     <a class="btn btn-primary" href="/submission/">Submit Module</a>
   </section>
