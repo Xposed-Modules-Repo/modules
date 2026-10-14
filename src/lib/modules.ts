@@ -833,7 +833,7 @@ async function parseRepository (repo: RepoNode, fingerprint: string): Promise<Mo
   const releases = await normalizeReleases(repo)
   const record: ModuleRecord = {
     name: repo.name,
-    description: repo.description,
+    description: repo.description?.replace(/^\d+\./, "").trim(),
     url: repo.url,
     homepageUrl: repo.homepageUrl,
     collaborators: normalizeCollaborators(repo.collaborators?.nodes),
