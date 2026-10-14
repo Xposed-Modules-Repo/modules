@@ -31,7 +31,7 @@ function sizeLabel (bytes: number): string {
             {release.isPrerelease ? 'Pre-release' : 'Stable'}
           </span>
         </div>
-        {release.publishedAt && <p class="color-fg-muted">{new Date(release.publishedAt).toLocaleString()}</p>}
+        {release.publishedAt && <p class="color-fg-muted" data-published-at={release.publishedAt}>{new Date(release.publishedAt).toLocaleString()}</p>}
         {release.descriptionHTML && <div class="markdown-body" set:html={rewriteAssetProxyHtml(release.descriptionHTML)} />}
         {release.releaseAssets.length > 0 && (
           <div class="release-assets">
@@ -58,3 +58,13 @@ function sizeLabel (bytes: number): string {
     ))}
   </section>
 )}
+
+<script>
+  const publishedAts = document.querySelectorAll("[data-published-at]")
+  for (const p of publishedAts) {
+    if (!(p instanceof HTMLParagraphElement)) continue
+    const publishedAt = p.dataset["publishedAt"]
+    if (publishedAt === undefined) continue
+    p.textContent = new Date(publishedAt).toLocaleString()
+  }
+</script>

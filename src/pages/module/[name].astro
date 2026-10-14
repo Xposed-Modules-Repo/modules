@@ -69,7 +69,7 @@ const hasModuleAds = Boolean(adsClient && (adSlots.top || adSlots.sidebar || adS
           <div class="Box-body">
             <h3 class="h4"><a href={latest.url} target="_blank" rel="noreferrer">{latest.name || latest.tagName}</a></h3>
             <p class="mb-1"><span class={`Label ${latest.isPrerelease ? 'Label--attention' : 'Label--success'}`}>{latest.isPrerelease ? 'Pre-release' : 'Stable'}</span></p>
-            {latest.publishedAt && <p class="color-fg-muted mb-2">{new Date(latest.publishedAt).toLocaleString()}</p>}
+            {latest.publishedAt && <p class="color-fg-muted mb-2" data-published-at={latest.publishedAt}>{new Date(latest.publishedAt).toLocaleString()}</p>}
             <a href="#releases">View all releases</a>
           </div>
         </div>
@@ -87,3 +87,13 @@ const hasModuleAds = Boolean(adsClient && (adSlots.top || adSlots.sidebar || adS
     )}
   </div>
 </Layout>
+
+<script>
+  const publishedAts = document.querySelectorAll("[data-published-at]")
+  for (const p of publishedAts) {
+    if (!(p instanceof HTMLParagraphElement)) continue
+    const publishedAt = p.dataset["publishedAt"]
+    if (publishedAt === undefined) continue
+    p.textContent = new Date(publishedAt).toLocaleString()
+  }
+</script>
