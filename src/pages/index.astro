@@ -7,13 +7,15 @@ import { getSiteData } from '../lib/modules'
 const data = await getSiteData()
 const pageCount = Math.ceil(data.listItems.length / data.pageSize)
 const modules = data.listItems.slice(0, data.pageSize)
+
+const buildTime = new Date()
 ---
 
 <Layout title="Xposed Module Repository">
   <section class="page-heading">
     <div>
       <h1>Xposed Module Repository</h1>
-      <p>{data.listItems.length} modules, generated from GitHub releases.</p>
+      <p>{data.listItems.length} modules, generated from GitHub releases on <span data-build-time={buildTime.toISOString()}>{1}</span>.</p>
     </div>
     <a class="btn btn-primary" href="/submission/">Submit Module</a>
   </section>
@@ -31,3 +33,16 @@ const modules = data.listItems.slice(0, data.pageSize)
     </noscript>
   )}
 </Layout>
+
+<script>
+  const onLoad = () => {
+    const span = document.querySelector("[data-build-time]")
+    if (span === null) return
+    if (!(span instanceof HTMLSpanElement)) return
+    const buildTime = span.dataset["buildTime"]
+    console.log(span.dataset)
+    if (buildTime === undefined) return
+    span.textContent = new Date(buildTime).toLocaleString()
+  }
+  onLoad()
+</script>
