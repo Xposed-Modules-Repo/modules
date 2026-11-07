@@ -298,7 +298,7 @@ async function main() {
 
   endGroup()
 
-  const newTagName = `${androidManifest.versionCode}-${androidManifest.versionName.replace(" ", "-")}`
+  const newTagName = `${androidManifest.versionCode}-${androidManifest.versionName.replace(" ", "_")}`
   if (tagName === newTagName) return
   try {
     await createEmptyCommit(newTagName)
